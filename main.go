@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"fmt"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -12,18 +11,14 @@ import (
 )
 
 const kubernetesHost = "http://10.20.40.254:8080/"
-const kubernetesNamespace = "plex"
-const dockerImage = "timhaak/plex"
-
-func generateName() string {
-	return "transcode-job"
-}
+const kubernetesNamespace = "default"
+const dockerImage = "registry.marley.xyz/e720/plex-new-transcoder"
+const podBasename = "plex-transcoder"
 
 func main() {
 	// Get the arguments passed to Plex New Transcoder
 	args := os.Args[1:]
-	log.Print(fmt.Sprintf("Dispatching job: %s", args))
-
+	log.Print("Dispatching job with args: ", args)
 
 	job := job.Job{
 		Host: kubernetesHost,
@@ -33,16 +28,15 @@ func main() {
 					Kind: "Pod",
 				},
 				ObjectMeta: api.ObjectMeta{
-					GenerateName: generateName(),
+					GenerateName: podBasename,
 					Namespace: kubernetesNamespace,
 				},
 				Spec: api.PodSpec{
 					RestartPolicy: api.RestartPolicyNever,
 					Containers: []api.Container{
 						api.Container{
-							Name: generateName(),
+							Name: podBasename,
 							Image: dockerImage,
-							Command: []string{"/usr/lib/plexmediaserver/Resources/Plex New Transcoder"},
 							Args: args,
 						},
 					},
