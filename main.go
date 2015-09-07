@@ -7,7 +7,7 @@ import (
 
 	"k8s.io/kubernetes/pkg/api"
 
-	"git.marley.xyz/e720/plex-elastic-transcoder/job"
+	"github.com/munnerz/plex-elastic-transcoder/job"
 )
 
 const kubernetesHost = "http://10.20.40.254:8080/"
