@@ -48,4 +48,28 @@ func main() {
 	if err != nil {
 		log.Fatal("Job start failed with error: ", err)
 	}
+
+	log.Print("Waiting for build pod to enter Running state...")
+
+	err = job.WaitForState(api.PodRunning)
+	if err != nil {
+		log.Fatal("Error waiting for pod to enter running state: ", err)
+	}
+
+	log.Print("Job has started running...")
+	log.Print("Waiting for job to complete...")
+
+	err = job.WaitForState(api.PodSucceeded)
+	if err != nil {
+		log.Fatal("Error waiting for job to complete: ", err)
+	}
+
+	log.Print("Job completed. Destroying pod...")
+
+	err = job.Stop()
+	if err != nil {
+		log.Fatal("Error stopping job: ", err)
+	}
+
+	log.Print("Pod destroyed. Exiting.")
 }
