@@ -26,6 +26,7 @@ func main() {
 
 
 	job := job.Job{
+		Host: kubernetesHost,
 		Pod: 
 			&api.Pod{
 				TypeMeta: api.TypeMeta{

@@ -7,16 +7,15 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-const kubernetesHost = "http://10.20.40.254:8080/"
-
 type Job struct {
+	Host       string
 	Pod        *api.Pod
 }
 
 func (t Job) kubernetesClient() (*client.Client, error) {
 	client, err := client.New(
 		&client.Config{
-			Host: kubernetesHost,
+			Host: t.Host,
 			Version: "v1",
 		})
 
