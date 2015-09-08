@@ -2,56 +2,68 @@ package main
 
 import (
 	"os"
+	"os/signal"
+	"syscall"
 
 	log "github.com/Sirupsen/logrus"
 
-	"k8s.io/kubernetes/pkg/api"
+	"github.com/munnerz/plex-elastic-transcoder/common"
+	"github.com/munnerz/plex-elastic-transcoder/executors"
 
-	"github.com/munnerz/plex-elastic-transcoder/job"
+	_ "github.com/munnerz/plex-elastic-transcoder/executors/kubernetes"
 )
 
-const kubernetesHost = "http://10.20.40.254:8080/"
-const kubernetesNamespace = "default"
-const dockerImage = "registry.marley.xyz/e720/plex-new-transcoder"
-const podBasename = "plex-transcoder"
+var executor executors.Executor
 
+func signals() {
+	// Signal handling
+	c := make(chan os.Signal, 1)
+
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+	go func() {
+		<-c
+		log.Print("Shutting down...")
+
+		if executor != nil {
+			log.Print("Terminating running job...")
+			err := executor.Stop()
+			if err != nil {
+				log.Fatal("Error terminating job: ", err)
+				os.Exit(1)
+			}
+
+			log.Print("Successfully terminated running job.")
+		}
+
+		os.Exit(0)
+	}()
+}
 func main() {
+	// Setup signals
+	signals()
+
 	// Get the arguments passed to Plex New Transcoder
 	args := os.Args[1:]
 	log.Print("Dispatching job with args: ", args)
 
-	job := job.Job{
-		Host: kubernetesHost,
-		Pod: 
-			&api.Pod{
-				TypeMeta: api.TypeMeta{
-					Kind: "Pod",
-				},
-				ObjectMeta: api.ObjectMeta{
-					GenerateName: podBasename,
-					Namespace: kubernetesNamespace,
-				},
-				Spec: api.PodSpec{
-					RestartPolicy: api.RestartPolicyNever,
-					Containers: []api.Container{
-						api.Container{
-							Name: podBasename,
-							Image: dockerImage,
-							Args: args,
-						},
-					},
-				},
-			},
+	job := executors.Job{
+		Command: []string{"/Plex New Transcoder"},
+		Args: args,
 	}
 
-	err := job.Start()
+	executor = common.CreateExecutor(job)
+
+	log.Print("Created executor: ", executor)
+
+	err := executor.Start()
 	if err != nil {
 		log.Fatal("Job start failed with error: ", err)
 	}
 
 	log.Print("Waiting for build pod to enter Running state...")
 
-	err = job.WaitForState(api.PodRunning)
+	err = executor.WaitForState(executors.ExecutorRunning)
 	if err != nil {
 		log.Fatal("Error waiting for pod to enter running state: ", err)
 	}
@@ -59,14 +71,14 @@ func main() {
 	log.Print("Job has started running...")
 	log.Print("Waiting for job to complete...")
 
-	err = job.WaitForState(api.PodSucceeded)
+	err = executor.WaitForState(executors.ExecutorSucceeded)
 	if err != nil {
 		log.Fatal("Error waiting for job to complete: ", err)
 	}
 
 	log.Print("Job completed. Destroying pod...")
 
-	err = job.Stop()
+	err = executor.Stop()
 	if err != nil {
 		log.Fatal("Error stopping job: ", err)
 	}
