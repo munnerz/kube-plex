@@ -2,7 +2,7 @@ FROM debian
 
 RUN mkdir /pms && \
 	cd /pms && \
-	wget -O pms.deb "http://downloads.plex.tv/plex-media-server/0.9.12.11.1406-8403350/plexmediaserver_0.9.12.11.1406-8403350_amd64.deb" && \
+	curl -o pms.deb "https://downloads.plex.tv/plex-media-server/0.9.12.11.1406-8403350/plexmediaserver_0.9.12.11.1406-8403350_amd64.deb" && \
 	ar vx pms.deb && \
 	tar -zxvf data.tar.gz && \
 	mv usr/lib/plexmediaserver /plexmediaserver && \
