@@ -20,4 +20,4 @@ ADD bootstrap.sh /plexmediaserver/bootstrap.sh
 
 ENV LD_LIBRARY_PATH "/plexmediaserver"
 
-ENTRYPOINT ["/plexmediaserver/Resources/Plex New Transcoder"]
+ENTRYPOINT ["/plexmediaserver/bootstrap.sh"]
