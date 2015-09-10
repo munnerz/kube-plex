@@ -67,6 +67,7 @@ func (e *KubernetesExecutor) createPod() *api.Pod {
 				api.Container{
 					Name: podBasename,
 					Image: e.Image,
+					Command: e.Job.Command,
 					Args: e.Job.Args,
 					VolumeMounts: []api.VolumeMount{
 						api.VolumeMount{
