@@ -37,8 +37,8 @@ after_success:
   - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o plex-elastic-transcoder github.com/munnerz/plex-elastic-transcoder
   - docker build -t registry.marley.xyz/munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} -f Dockerfile.plex .
   - docker build -t registry.marley.xyz/munnerz/plex-new-transcoder:${TRAVIS_COMMIT:0:7} -f Dockerfile.runner .
-  - docker tag -f registry.marley.xyz/munnerz/elastic-plex:latest registry.marley.xyz/munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
-  - docker tag -f registry.marley.xyz/munnerz/plex-new-transcoder:latest registry.marley.xyz/munnerz/plex-new-transcoder:${TRAVIS_COMMIT:0:7}
+  - docker tag -f registry.marley.xyz/munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} "registry.marley.xyz/munnerz/elastic-plex:latest"
+  - docker tag -f registry.marley.xyz/munnerz/plex-new-transcoder:${TRAVIS_COMMIT:0:7} "registry.marley.xyz/munnerz/plex-new-transcoder:latest"
   - docker push registry.marley.xyz/munnerz/elastic-plex:latest
   - docker push registry.marley.xyz/munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
   - docker push registry.marley.xyz/munnerz/plex-new-transcoder:latest
