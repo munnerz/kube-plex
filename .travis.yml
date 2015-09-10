@@ -35,12 +35,11 @@ script:
 # Run rolling update
 after_success:
   - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o plex-elastic-transcoder github.com/munnerz/plex-elastic-transcoder
-  - docker login -e "$DOCKER_EMAIL" -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-  - docker build -t munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} -f Dockerfile.plex .
-  - docker build -t munnerz/plex-elastic-transcoder:${TRAVIS_COMMIT:0:7} -f Dockerfile.runner .
-  - docker tag -f munnerz/elastic-plex:latest munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
-  - docker tag -f munnerz/plex-elastic-transcoder:latest munnerz/plex-elastic-transcoder:${TRAVIS_COMMIT:0:7}
-  - docker push munnerz/elastic-plex:latest
-  - docker push munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
-  - docker push munnerz/plex-elastic-transcoder:latest
-  - docker push munnerz/plex-elastic-transcoder:${TRAVIS_COMMIT:0:7}
+  - docker build -t registry.marley.xyz/munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} -f Dockerfile.plex .
+  - docker build -t registry.marley.xyz/munnerz/plex-elastic-transcoder:${TRAVIS_COMMIT:0:7} -f Dockerfile.runner .
+  - docker tag -f registry.marley.xyz/munnerz/elastic-plex:latest registry.marley.xyz/munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
+  - docker tag -f registry.marley.xyz/munnerz/plex-elastic-transcoder:latest registry.marley.xyz/munnerz/plex-elastic-transcoder:${TRAVIS_COMMIT:0:7}
+  - docker push registry.marley.xyz/munnerz/elastic-plex:latest
+  - docker push registry.marley.xyz/munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
+  - docker push registry.marley.xyz/munnerz/plex-elastic-transcoder:latest
+  - docker push registry.marley.xyz/munnerz/plex-elastic-transcoder:${TRAVIS_COMMIT:0:7}
