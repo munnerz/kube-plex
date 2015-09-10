@@ -6,5 +6,6 @@ It works by scheduling a job on a Kubernetes cluster, with the appropriate media
 
 ### Todo list
 
-- Add NFS mount directories to created pods for media and transcoding directories
 - Make config load from a file
+- Make executor backend selection happen dynamically based on available backends
+- Disable force pull of images when not running in testing/debug mode
