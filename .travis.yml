@@ -5,6 +5,9 @@ sudo: required
 
 language: go
 
+only:
+  - master
+
 # No support for "tip" at the moment as there's no $GOROOT_BOOTSTRAP
 go:
   - 1.5
