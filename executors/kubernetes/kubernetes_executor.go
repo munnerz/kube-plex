@@ -31,6 +31,7 @@ type KubernetesExecutor struct {
 }
 
 func (e *KubernetesExecutor) createPod() *api.Pod {
+	fmt.Println("Args: ", e.Job.Args)
 	return &api.Pod{
 		TypeMeta: api.TypeMeta{
 			Kind: "Pod",
@@ -66,7 +67,6 @@ func (e *KubernetesExecutor) createPod() *api.Pod {
 				api.Container{
 					Name: podBasename,
 					Image: e.Image,
-					Command: e.Job.Command,
 					Args: e.Job.Args,
 					VolumeMounts: []api.VolumeMount{
 						api.VolumeMount{
@@ -159,11 +159,13 @@ func (e *KubernetesExecutor) WaitForState(targetState executors.ExecutorPhase) e
 func init() {
 	common.RegisterExecutor("kubernetes", common.ExecutorFactory{
 		Create: func(j executors.Job) executors.Executor {
-			return &KubernetesExecutor{
+			e := &KubernetesExecutor{
 				Host: kubernetesHost,
 				Namespace: kubernetesNamespace,
 				Image: dockerImage,
 			}
+			e.Job = j
+			return e
 		},
 	})
 }
