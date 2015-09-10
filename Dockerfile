@@ -13,7 +13,10 @@ RUN mkdir /pms && \
 	cd / && \
 	rm -Rf /pms
 
+
 WORKDIR /plexmediaserver
+
+ADD bootstrap.sh .
 
 ENV LD_LIBRARY_PATH "/plexmediaserver"
 

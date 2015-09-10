@@ -2,6 +2,8 @@ package kubernetes
 
 import (
 	"time"
+	"errors"
+	"fmt"
 
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/client"
@@ -15,7 +17,7 @@ import (
 const podBasename = "plex-transcoder"
 const kubernetesHost = "10.20.40.254:8080"
 const kubernetesNamespace = "plex"
-const dockerImage = "registry.marley.xyz/e720/plex-new-transcoder"
+const dockerImage = "munnerz/plex-new-transcoder"
 
 type KubernetesExecutor struct {
 	executors.AbstractExecutor
@@ -30,25 +32,56 @@ type KubernetesExecutor struct {
 
 func (e *KubernetesExecutor) createPod() *api.Pod {
 	return &api.Pod{
-				TypeMeta: api.TypeMeta{
-					Kind: "Pod",
-				},
-				ObjectMeta: api.ObjectMeta{
-					GenerateName: podBasename,
-					Namespace: e.Namespace,
-				},
-				Spec: api.PodSpec{
-					RestartPolicy: api.RestartPolicyNever,
-					Containers: []api.Container{
-						api.Container{
-							Name: podBasename,
-							Image: e.Image,
-							Command: e.Job.Command,
-							Args: e.Job.Args,
+		TypeMeta: api.TypeMeta{
+			Kind: "Pod",
+		},
+		ObjectMeta: api.ObjectMeta{
+			GenerateName: podBasename,
+			Namespace: e.Namespace,
+		},
+		Spec: api.PodSpec{
+			Volumes: []api.Volume{
+				api.Volume{
+					Name: "source-dir",
+					VolumeSource: api.VolumeSource {
+						NFS: &api.NFSVolumeSource {
+							Server: "10.12.14.16",
+							Path: "/tank/media",
+							ReadOnly: true,
 						},
 					},
 				},
-			}
+				api.Volume{
+					Name: "transcode-dir",
+					VolumeSource: api.VolumeSource {
+						NFS: &api.NFSVolumeSource {
+							Server: "10.12.14.16",
+							Path: "/ssd/plex/Buffer",
+						},
+					},
+				},
+			},
+			RestartPolicy: api.RestartPolicyNever,
+			Containers: []api.Container{
+				api.Container{
+					Name: podBasename,
+					Image: e.Image,
+					Command: e.Job.Command,
+					Args: e.Job.Args,
+					VolumeMounts: []api.VolumeMount{
+						api.VolumeMount{
+							Name: "source-dir",
+							MountPath: "/tank/media",
+						},
+						api.VolumeMount{
+							Name: "transcode-dir",
+							MountPath: "/ssd/plex/Buffer",
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func (e *KubernetesExecutor) Start() error {
@@ -112,6 +145,8 @@ func (e *KubernetesExecutor) WaitForState(targetState executors.ExecutorPhase) e
 		switch podPhaseToExecutorPhase(pod.Status.Phase) {
 		case targetState:
 			break Loop
+		case executors.ExecutorFailed:
+			return errors.New(fmt.Sprintf("Pod failed whilst waiting for state: %s\nReason: %s", targetState, pod.Status.Reason))
 		default:
 			break Switch
 		}

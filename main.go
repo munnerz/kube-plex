@@ -4,6 +4,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"fmt"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -11,6 +13,12 @@ import (
 	"github.com/munnerz/plex-elastic-transcoder/executors"
 
 	_ "github.com/munnerz/plex-elastic-transcoder/executors/kubernetes"
+)
+
+const (
+	cmdPath = "/plexmediaserver/bootstrap.sh"
+	logFilePath = "/var/log/plex/plex-elastic-transcoder.log"
+	plexServerURL = "10.12.14.16:32400"
 )
 
 var executor executors.Executor
@@ -39,16 +47,42 @@ func signals() {
 		os.Exit(0)
 	}()
 }
+
 func main() {
 	// Setup signals
 	signals()
 
+	// Setup logs
+	fo, err := os.Create(logFilePath)
+
+	if err != nil {
+		panic(fmt.Sprintf("Error opening log file: %s", err))
+	}
+
+	defer func() {
+		if err := fo.Close(); err != nil {
+			panic(fmt.Sprintf("Error closing file: %s", err))
+		}
+	}()
+
+	log.SetOutput(fo)
+
 	// Get the arguments passed to Plex New Transcoder
 	args := os.Args[1:]
+	wd, _ := os.Getwd()
+	for i, arg := range args {
+		if arg == "-progressurl" {
+			// Change the progress URL to report to about the transcode
+			args[i + 1] = strings.Replace(args[i+1], "127.0.0.1:32400", plexServerURL, 1)
+		}
+	}
+	args = append([]string{wd}, args)
+
+	log.Print("In WD: ", wd)
 	log.Print("Dispatching job with args: ", args)
 
 	job := executors.Job{
-		Command: []string{"/Plex New Transcoder"},
+		Command: []string{cmdPath},
 		Args: args,
 	}
 
@@ -56,7 +90,7 @@ func main() {
 
 	log.Print("Created executor: ", executor)
 
-	err := executor.Start()
+	err = executor.Start()
 	if err != nil {
 		log.Fatal("Job start failed with error: ", err)
 	}
