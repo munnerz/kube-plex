@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	cmdPath = "/bootstrap.sh"
+	cmdPath = "/plexmediaserver/bootstrap.sh"
 	logFilePath = "/var/log/plex/plex-elastic-transcoder.log"
 	plexServerURL = "10.20.40.60:32400"
 )
