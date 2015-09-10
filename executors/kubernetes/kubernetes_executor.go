@@ -55,7 +55,7 @@ func (e *KubernetesExecutor) createPod() *api.Pod {
 					Name: "transcode-dir",
 					VolumeSource: api.VolumeSource {
 						NFS: &api.NFSVolumeSource {
-							Server: "kube.storage.marley.xyz",
+							Server: "storage.kube.marley.xyz",
 							Path: "/shares/containers/plex/config",
 						},
 					},
@@ -75,7 +75,7 @@ func (e *KubernetesExecutor) createPod() *api.Pod {
 						},
 						api.VolumeMount{
 							Name: "transcode-dir",
-							MountPath: "/ssd/plex/Buffer",
+							MountPath: "/config",
 						},
 					},
 					ImagePullPolicy: api.PullAlways,
