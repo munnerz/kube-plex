@@ -1,0 +1,48 @@
+# Use the new Container based KVM stack which allows "sudo" access
+dist: trusty
+
+sudo: required
+
+language: go
+
+# No support for "tip" at the moment as there's no $GOROOT_BOOTSTRAP
+go:
+  - 1.4
+  - 1.5
+  - tip
+
+# Set Travis to cache dependencies that take a while to install.
+# At the moment apt is our longest thing (takes 1minute) and Travis doesn't
+# yet support caching that on the Container infrastructure but they will do
+# in the future so leave this in
+#cache:
+  #apt: true
+
+services:
+    - docker
+
+# No support for "tip" at the moment as there's no $GOROOT_BOOTSTRAP
+matrix:
+  allow_failures:
+    - go: tip
+
+
+install:
+  # Install all of the feeder dependencies
+  - go get ./...
+
+script:
+  - go test -cpu=2 -race -v -covermode=atomic ./...
+
+# Run rolling update
+after_success:
+  - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o plex-elastic-transcoder github.com/munnerz/plex-elastic-transcoder
+  - docker login --email="$DOCKER_EMAIL" --username="$DOCKER_PASSWORD" --password="$DOCKER_PASSWORD"
+  - docker build -t munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} -f Dockerfile.plex .
+  - docker build -t munnerz/plex-elastic-transcoder:${TRAVIS_COMMIT:0:7} -f Dockerfile.runner .
+  - docker tag -f munnerz/elastic-plex:latest munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
+  - docker tag -f munnerz/plex-elastic-transcoder:latest munnerz/plex-elastic-transcoder:${TRAVIS_COMMIT:0:7}
+  - docker push munnerz/elastic-plex:latest
+  - docker push munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
+  - docker push munnerz/plex-elastic-transcoder:latest
+  - docker push munnerz/plex-elastic-transcoder:${TRAVIS_COMMIT:0:7}
