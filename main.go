@@ -76,7 +76,7 @@ func main() {
 			args[i + 1] = strings.Replace(args[i+1], "127.0.0.1:32400", plexServerURL, 1)
 		}
 	}
-	args = append([]string{wd}, args)
+	args = append([]string{wd}, args...)
 
 	log.Print("In WD: ", wd)
 	log.Print("Dispatching job with args: ", args)
