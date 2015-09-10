@@ -1,4 +1,4 @@
-# Plex Elastic Transcoder
+# Plex Elastic Transcoder [![Build Status](https://travis-ci.org/munnerz/plex-elastic-transcoder.svg?branch=master)](https://travis-ci.org/munnerz/plex-elastic-transcoder)
 
 This is a simple tool that should be used in place of the "Plex New Transcoder" binary on your Plex Media Server host in order to distribute the load of Plex transcoding.
 
