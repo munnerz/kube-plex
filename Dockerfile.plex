@@ -2,4 +2,4 @@
 FROM timhaak/plex:latest
 
 # Replace the Transcoder binary with our elastic transcoder
-ADD "plex-elastic-transcoder" "/usr/lib/plexmediaserver/Resources/Plex New Transcoder"
+ADD ["./plex-elastic-transcoder", "/usr/lib/plexmediaserver/Resources/Plex New Transcoder"]
