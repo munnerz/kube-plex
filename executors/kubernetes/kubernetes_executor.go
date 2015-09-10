@@ -78,6 +78,7 @@ func (e *KubernetesExecutor) createPod() *api.Pod {
 							MountPath: "/ssd/plex/Buffer",
 						},
 					},
+					ImagePullPolicy: api.PullAlways,
 				},
 			},
 		},
