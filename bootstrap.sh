@@ -1,11 +1,11 @@
 #!/bin/bash
 
-mkdir -p "$1"
+mkdir -p "$2"
  
-cd "$1"
+cd "$2"
 
-echo "CD'd to directory: $1"
+echo "CD'd to directory: $2"
 
-echo "Executing with parameters: ${@:2}"
+echo "Executing with parameters: ${@:3}"
 
-/plexmediaserver/Resources/Plex\ New\ Transcoder "${@:2}"
+/plexmediaserver/Resources/Plex\ New\ Transcoder "${@:3}"
