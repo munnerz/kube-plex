@@ -17,7 +17,7 @@ import (
 const podBasename = "plex-transcoder"
 const kubernetesHost = "10.20.40.254:8080"
 const kubernetesNamespace = "plex"
-const dockerImage = "registry.marley.xyz/munnerz/plex-new-transcoder"
+const dockerImage = "munnerz/plex-new-transcoder"
 
 type KubernetesExecutor struct {
 	executors.AbstractExecutor
