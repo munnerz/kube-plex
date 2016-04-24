@@ -8,29 +8,14 @@ language: go
 only:
   - master
 
-# No support for "tip" at the moment as there's no $GOROOT_BOOTSTRAP
 go:
-  - 1.5
-
-# Set Travis to cache dependencies that take a while to install.
-# At the moment apt is our longest thing (takes 1minute) and Travis doesn't
-# yet support caching that on the Container infrastructure but they will do
-# in the future so leave this in
-#cache:
-  #apt: true
+  - 1.6
 
 services:
     - docker
 
-# No support for "tip" at the moment as there's no $GOROOT_BOOTSTRAP
-matrix:
-  allow_failures:
-    - go: tip
-
-
 install:
-  # Install all of the feeder dependencies
-  - go get ./...
+  - true
 
 script:
   - go test -cpu=2 -race -v -covermode=atomic ./...
@@ -38,11 +23,7 @@ script:
 # Run rolling update
 after_success:
   - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o plex-elastic-transcoder github.com/munnerz/plex-elastic-transcoder
-  - docker build -t registry.marley.xyz/munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} -f Dockerfile.plex .
-  - docker build -t registry.marley.xyz/munnerz/plex-new-transcoder:${TRAVIS_COMMIT:0:7} -f Dockerfile.runner .
-  - docker tag -f registry.marley.xyz/munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} "registry.marley.xyz/munnerz/elastic-plex:latest"
-  - docker tag -f registry.marley.xyz/munnerz/plex-new-transcoder:${TRAVIS_COMMIT:0:7} "registry.marley.xyz/munnerz/plex-new-transcoder:latest"
-  - docker push registry.marley.xyz/munnerz/elastic-plex:latest
-  - docker push registry.marley.xyz/munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
-  - docker push registry.marley.xyz/munnerz/plex-new-transcoder:latest
-  - docker push registry.marley.xyz/munnerz/plex-new-transcoder:${TRAVIS_COMMIT:0:7}
+  - docker build -t munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} -f Dockerfile.plex .
+  - docker tag -f munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} "munnerz/elastic-plex:latest"
+  - docker push munnerz/elastic-plex:latest
+  - docker push munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
