@@ -20,4 +20,4 @@ ADD bootstrap.sh /plexmediaserver/bootstrap.sh
 
 ENV LD_LIBRARY_PATH "/plexmediaserver"
 
-CMD ["/plexmediaserver/bootstrap.sh"]
+ENTRYPOINT ["/plexmediaserver/bootstrap.sh"]
