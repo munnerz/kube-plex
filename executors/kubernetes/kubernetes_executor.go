@@ -1,82 +1,60 @@
 package kubernetes
 
 import (
-	"time"
-	"errors"
 	"fmt"
-
-	"k8s.io/kubernetes/pkg/api"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"k8s.io/kubernetes/pkg/api"
+	stableApi "k8s.io/kubernetes/pkg/api/unversioned"
+	"k8s.io/kubernetes/pkg/client/restclient"
+	client "k8s.io/kubernetes/pkg/client/unversioned"
 
-	"github.com/munnerz/plex-elastic-transcoder/executors"
 	"github.com/munnerz/plex-elastic-transcoder/common"
+	"github.com/munnerz/plex-elastic-transcoder/executors"
 )
-
-const podBasename = "plex-transcoder"
-const kubernetesHost = "10.20.40.254:8080"
-const kubernetesNamespace = "plex"
-const dockerImage = "registry.marley.xyz/munnerz/plex-new-transcoder"
 
 type KubernetesExecutor struct {
 	executors.AbstractExecutor
 
-	Host       string
-	Namespace  string
-	Image      string
-
-	pod        *api.Pod
-	client     *client.Client
+	pod    *api.Pod
+	client *client.Client
 }
 
 func (e *KubernetesExecutor) createPod() *api.Pod {
-	fmt.Println("Args: ", e.Job.Args)
 	return &api.Pod{
-		TypeMeta: api.TypeMeta{
+		TypeMeta: stableApi.TypeMeta{
 			Kind: "Pod",
 		},
 		ObjectMeta: api.ObjectMeta{
-			GenerateName: podBasename,
-			Namespace: e.Namespace,
+			GenerateName: fmt.Sprintf("%s-", e.Config.Kubernetes.PodBasename),
+			Namespace:    e.Config.Kubernetes.Namespace,
 		},
 		Spec: api.PodSpec{
 			Volumes: []api.Volume{
 				api.Volume{
-					Name: "source-dir",
-					VolumeSource: api.VolumeSource {
-						NFS: &api.NFSVolumeSource {
-							Server: "10.12.14.16",
-							Path: "/tank/media",
-							ReadOnly: true,
-						},
-					},
+					Name:         "source-dir",
+					VolumeSource: e.Config.Kubernetes.MediaVolumeSource,
 				},
 				api.Volume{
-					Name: "transcode-dir",
-					VolumeSource: api.VolumeSource {
-						NFS: &api.NFSVolumeSource {
-							Server: "storage.kube.marley.xyz",
-							Path: "/shares/containers/plex/transcode",
-						},
-					},
+					Name:         "transcode-dir",
+					VolumeSource: e.Config.Kubernetes.TranscodeVolumeSource,
 				},
 			},
 			RestartPolicy: api.RestartPolicyNever,
 			Containers: []api.Container{
 				api.Container{
-					Name: podBasename,
-					Image: e.Image,
-					Command: e.Job.Command,
-					Args: e.Job.Args,
+					Name:  "plex-new-transcoder",
+					Image: e.Config.Kubernetes.Image,
+					Args:  e.Job.Args,
 					VolumeMounts: []api.VolumeMount{
 						api.VolumeMount{
-							Name: "source-dir",
-							MountPath: "/data",
+							Name:      "source-dir",
+							MountPath: e.Config.Plex.MediaDir,
 						},
 						api.VolumeMount{
-							Name: "transcode-dir",
-							MountPath: "/tmp",
+							Name:      "transcode-dir",
+							MountPath: e.Config.Plex.TranscodeDir,
 						},
 					},
 					ImagePullPolicy: api.PullAlways,
@@ -87,31 +65,30 @@ func (e *KubernetesExecutor) createPod() *api.Pod {
 }
 
 func (e *KubernetesExecutor) Start() error {
-	log.Print("Executing job: ", e)
+	log.Debugf("executing job: %s", e.Job)
 
-	e.pod = e.createPod()
-
-	client, err := client.New(
-		&client.Config{
-			Host: e.Host,
+	if len(e.Config.Kubernetes.ProxyURL) > 0 {
+		e.client = client.NewOrDie(&restclient.Config{
+			Host: e.Config.Kubernetes.ProxyURL,
 		})
+	} else {
+		var err error
+		e.client, err = client.NewInCluster()
+		if err != nil {
+			return fmt.Errorf("failed to create kubernetes client: %s", err.Error())
+		}
+	}
+
+	pod := e.createPod()
+
+	var err error
+	e.pod, err = e.client.Pods(pod.ObjectMeta.Namespace).Create(pod)
 
 	if err != nil {
 		return err
 	}
 
-	e.client = client
-
-	log.Print("Creating pod...")
-	pod, err := e.client.Pods(e.pod.ObjectMeta.Namespace).Create(e.pod)
-
-	if err != nil {
-		return err
-	}
-
-	e.pod = pod
-
-	log.Print("Successfully scheduled job on cluster with name: ", e.pod.ObjectMeta.Name)
+	log.Debugf("successfully scheduled job on cluster with name: %s", e.pod.ObjectMeta.Name)
 
 	return nil
 }
@@ -120,35 +97,37 @@ func (e *KubernetesExecutor) Stop() error {
 	return e.client.Pods(e.pod.ObjectMeta.Namespace).Delete(e.pod.ObjectMeta.Name, nil)
 }
 
-func podPhaseToExecutorPhase(in api.PodPhase) executors.ExecutorPhase {
+func podPhaseToExecutorPhase(in api.PodPhase) common.ExecutorPhase {
 	switch in {
 	case api.PodRunning:
-		return executors.ExecutorRunning
+		return common.ExecutorPhaseRunning
 	case api.PodPending:
-		return executors.ExecutorPreparing
+		return common.ExecutorPhasePreparing
 	case api.PodSucceeded:
-		return executors.ExecutorSucceeded
+		return common.ExecutorPhaseSucceeded
 	case api.PodFailed:
-		return executors.ExecutorFailed
+		return common.ExecutorPhaseFailed
 	default:
-		return executors.ExecutorUnknown
+		return common.ExecutorPhaseUnknown
 	}
 }
 
-func (e *KubernetesExecutor) WaitForState(targetState executors.ExecutorPhase) error {
-	Loop:
+func (e *KubernetesExecutor) WaitForState(targetState common.ExecutorPhase) error {
+Loop:
 	for {
 		pod, err := e.client.Pods(e.pod.ObjectMeta.Namespace).Get(e.pod.ObjectMeta.Name)
 		if err != nil {
 			return err
 		}
 
-		Switch:
+		log.Debugf("pod state: %s", pod.Status.Phase)
+
+	Switch:
 		switch podPhaseToExecutorPhase(pod.Status.Phase) {
 		case targetState:
 			break Loop
-		case executors.ExecutorFailed:
-			return errors.New(fmt.Sprintf("Pod failed whilst waiting for state: %s\nReason: %s", targetState, pod.Status.Reason))
+		case common.ExecutorPhaseFailed:
+			return fmt.Errorf("pod failed whilst waiting for state '%s': %s", targetState, pod.Status.Reason)
 		default:
 			break Switch
 		}
@@ -159,14 +138,13 @@ func (e *KubernetesExecutor) WaitForState(targetState executors.ExecutorPhase) e
 
 func init() {
 	common.RegisterExecutor("kubernetes", common.ExecutorFactory{
-		Create: func(j executors.Job) executors.Executor {
-			e := &KubernetesExecutor{
-				Host: kubernetesHost,
-				Namespace: kubernetesNamespace,
-				Image: dockerImage,
+		Create: func(config common.Config, job common.Job) common.Executor {
+			return &KubernetesExecutor{
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: config,
+					Job:    job,
+				},
 			}
-			e.Job = j
-			return e
 		},
 	})
 }

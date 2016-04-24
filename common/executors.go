@@ -1,40 +1,52 @@
 package common
 
 import (
-	"errors"
 	"fmt"
-
-	"github.com/munnerz/plex-elastic-transcoder/executors"
 
 	log "github.com/Sirupsen/logrus"
 )
 
-type ExecutorFactory struct {
-	Create        func(executors.Job) executors.Executor
+type ExecutorPhase string
+
+const (
+	ExecutorPhasePreparing ExecutorPhase = "Preparing"
+	ExecutorPhaseRunning   ExecutorPhase = "Running"
+	ExecutorPhaseSucceeded ExecutorPhase = "Succeeded"
+	ExecutorPhaseFailed    ExecutorPhase = "Failed"
+	ExecutorPhaseUnknown   ExecutorPhase = "Unknown"
+)
+
+type Executor interface {
+	Start() error
+	Stop() error
+	WaitForState(ExecutorPhase) error
+	String() string
 }
 
-var executorFactories map[string]ExecutorFactory
+type Job struct {
+	Args []string
+}
 
-func CreateExecutor(j executors.Job) executors.Executor {
-	// TODO: Some sort of executor selection algorithm
+type ExecutorFactory struct {
+	Create func(Config, Job) Executor
+}
+
+var executorFactories = make(map[string]ExecutorFactory)
+
+func CreateExecutor(config Config, j Job) (Executor, error) {
+	// TODO: Select which executor to use based on config
 	for _, e := range executorFactories {
-		// TODO: Here, run the create command defined in the factory
-		return e.Create(j)
-		// Hacky way to dispatch to the first executor
+		return e.Create(config, j), nil
 	}
-	panic("No executors registered!")
+	return nil, fmt.Errorf("no configured executor found")
 }
 
 func RegisterExecutor(name string, e ExecutorFactory) error {
-	if executorFactories == nil {
-		executorFactories = make(map[string]ExecutorFactory)
-	}
-
 	if _, ok := executorFactories[name]; ok {
-		return errors.New(fmt.Sprintf("Executor already registered: %s", name))
+		return fmt.Errorf(fmt.Sprintf("executor already registered: %s", name))
 	}
 
-	log.Print("Registered executor: ", name)
+	log.Infof("Registered executor: %s", name)
 	executorFactories[name] = e
 	return nil
 }

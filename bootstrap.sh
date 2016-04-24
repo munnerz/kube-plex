@@ -1,7 +1,5 @@
 #!/bin/bash
 
-mkdir -p "$1"
- 
 cd "$1"
 
 echo "CD'd to directory: $1"

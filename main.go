@@ -1,27 +1,23 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
 	"os/signal"
-	"syscall"
-	"fmt"
 	"strings"
+	"syscall"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/go-yaml/yaml"
 
 	"github.com/munnerz/plex-elastic-transcoder/common"
-	"github.com/munnerz/plex-elastic-transcoder/executors"
 
 	_ "github.com/munnerz/plex-elastic-transcoder/executors/kubernetes"
 )
 
-const (
-	cmdPath = "/plexmediaserver/bootstrap.sh"
-	logFilePath = "/var/log/plex/plex-elastic-transcoder.log"
-	plexServerURL = "10.20.40.60:32400"
-)
+const configFile = "/etc/plex-elastic-transcoder/config.yaml"
 
-var executor executors.Executor
+var executor common.Executor
 
 func signals() {
 	// Signal handling
@@ -31,91 +27,124 @@ func signals() {
 	signal.Notify(c, syscall.SIGTERM)
 	go func() {
 		<-c
-		log.Print("Shutting down...")
+		log.Infof("shutting down...")
 
 		if executor != nil {
-			log.Print("Terminating running job...")
+			log.Infof("terminating running job...")
 			err := executor.Stop()
 			if err != nil {
-				log.Fatal("Error terminating job: ", err)
+				log.Fatalf("error terminating job: %s", err.Error())
 				os.Exit(1)
 			}
 
-			log.Print("Successfully terminated running job.")
+			log.Infof("successfully terminated running job")
 		}
 
 		os.Exit(0)
 	}()
 }
 
+func loadConfig() (*common.Config, error) {
+	data, err := ioutil.ReadFile(configFile)
+
+	if err != nil {
+		return nil, err
+	}
+
+	config := new(common.Config)
+
+	err = yaml.Unmarshal(data, config)
+
+	return config, err
+}
+
 func main() {
+	log.SetLevel(log.DebugLevel)
+	config, err := loadConfig()
+
+	if err != nil {
+		log.Fatalf("error loading config: %s", err.Error())
+	}
+
+	log.Debugf("loaded config: %s", config)
+
 	// Setup signals
 	signals()
 
 	// Setup logs
-	fo, err := os.Create(logFilePath)
+	if len(config.LogFile) > 0 {
+		fo, err := os.Create(config.LogFile)
 
-	if err != nil {
-		panic(fmt.Sprintf("Error opening log file: %s", err))
-	}
-
-	defer func() {
-		if err := fo.Close(); err != nil {
-			panic(fmt.Sprintf("Error closing file: %s", err))
+		if err != nil {
+			log.Fatalf("error opening log file: %s", err)
 		}
-	}()
 
-	log.SetOutput(fo)
+		log.SetOutput(fo)
+		defer func() {
+			if err := fo.Close(); err != nil {
+				log.Fatalf("error closing file: %s", err)
+			}
+		}()
+	}
 
 	// Get the arguments passed to Plex New Transcoder
 	args := os.Args[1:]
+	log.Debugf("executing job with args: %s", args)
 	wd, _ := os.Getwd()
 	for i, arg := range args {
-		if arg == "-progressurl" {
-			// Change the progress URL to report to about the transcode
-			args[i + 1] = strings.Replace(args[i+1], "127.0.0.1:32400", plexServerURL, 1)
+		switch arg {
+		case "-progressurl":
+			log.Debugf("replacing progressURL with: %s", config.Plex.URL)
+			args[i+1] = strings.Replace(args[i+1], "127.0.0.1:32400", config.Plex.URL, 1)
+			break
+		case "-loglevel":
+		case "loglevel_plex":
+			args[i+1] = "debug"
 		}
 	}
 	args = append([]string{wd}, args...)
 
-	log.Print("In WD: ", wd)
-	log.Print("Dispatching job with args: ", args)
+	log.Debugf("current working directory: %s", wd)
 
-	job := executors.Job{
-		Command: []string{cmdPath},
+	job := common.Job{
 		Args: args,
 	}
 
-	executor = common.CreateExecutor(job)
+	executor, err = common.CreateExecutor(*config, job)
 
-	log.Print("Created executor: ", executor)
-
-	err = executor.Start()
 	if err != nil {
-		log.Fatal("Job start failed with error: ", err)
+		log.Fatalf("error creating executor: %s", err.Error())
 	}
 
-	log.Print("Waiting for build pod to enter Running state...")
+	log.Infof("created executor: ", executor)
 
-	err = executor.WaitForState(executors.ExecutorRunning)
+	err = executor.Start()
+
+	if err != nil {
+		log.Fatalf("failed to start job: %s", err.Error())
+	}
+
+	log.Print("waiting for build pod to enter Running state...")
+
+	err = executor.WaitForState(common.ExecutorPhaseRunning)
 	if err != nil {
 		log.Fatal("Error waiting for pod to enter running state: ", err)
 	}
 
-	log.Print("Job has started running...")
-	log.Print("Waiting for job to complete...")
+	log.Infof("job has started running...")
+	log.Infof("waiting for job to complete...")
 
-	err = executor.WaitForState(executors.ExecutorSucceeded)
+	err = executor.WaitForState(common.ExecutorPhaseSucceeded)
 	if err != nil {
-		log.Fatal("Error waiting for job to complete: ", err)
+		log.Fatalf("error waiting for job to complete: %s", err.Error())
 	}
 
-	log.Print("Job completed. Destroying pod...")
+	log.Infof("job completed. cleaning up...")
 
 	err = executor.Stop()
 	if err != nil {
-		log.Fatal("Error stopping job: ", err)
+		log.Fatalf("error stopping job: %s", err.Error())
 	}
 
-	log.Print("Pod destroyed. Exiting.")
+	log.Printf("cleaned up successfully")
 }
