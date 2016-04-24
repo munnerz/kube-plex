@@ -5,7 +5,7 @@ import (
 )
 
 type Config struct {
-	LogFile string      `group:"config" namespace:"config"`
+	LogFile string      `name: "logFile" group:"config" namespace:"config"`
 	Plex    *PlexConfig `group:"plex config" namespace:"plex"`
 
 	Kubernetes *KubernetesConfig `group:"kubernetes executor" namespace:"kubernetes"`

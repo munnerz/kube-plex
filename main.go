@@ -19,6 +19,12 @@ const configFile = "/etc/plex-elastic-transcoder/config.yaml"
 
 var executor common.Executor
 
+type NullWriter struct{}
+
+func (NullWriter) Write(p []byte) (n int, err error) {
+	return len(p), nil
+}
+
 func signals() {
 	// Signal handling
 	c := make(chan os.Signal, 1)
@@ -59,14 +65,11 @@ func loadConfig() (*common.Config, error) {
 }
 
 func main() {
-	log.SetLevel(log.DebugLevel)
 	config, err := loadConfig()
 
 	if err != nil {
 		log.Fatalf("error loading config: %s", err.Error())
 	}
-
-	log.Debugf("loaded config: %s", config)
 
 	// Setup signals
 	signals()
@@ -85,6 +88,9 @@ func main() {
 				log.Fatalf("error closing file: %s", err)
 			}
 		}()
+	} else {
+		log.SetLevel(log.PanicLevel)
+		log.SetOutput(NullWriter{})
 	}
 
 	// Get the arguments passed to Plex New Transcoder
@@ -95,10 +101,11 @@ func main() {
 		switch arg {
 		case "-progressurl":
 			log.Debugf("replacing progressURL with: %s", config.Plex.URL)
-			args[i+1] = strings.Replace(args[i+1], "127.0.0.1:32400", config.Plex.URL, 1)
+			args[i+1] = strings.Replace(args[i+1], "http://127.0.0.1:32400", config.Plex.URL, 1)
 			break
 		case "-loglevel":
-		case "loglevel_plex":
+			args[i+1] = "debug"
+		case "-loglevel_plex":
 			args[i+1] = "debug"
 		}
 	}
