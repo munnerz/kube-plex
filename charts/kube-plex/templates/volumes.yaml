@@ -1,0 +1,54 @@
+## TODO: make this configurable through the helm chart
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ template "fullname" . }}-transcode
+  labels:
+    app: {{ template "name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: "nfs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ template "fullname" . }}-config
+  labels:
+    app: {{ template "name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: "nfs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ template "fullname" . }}-data
+  labels:
+    app: {{ template "name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  selector:
+    matchLabels:
+      name: pms-data
+  storageClassName: ""
