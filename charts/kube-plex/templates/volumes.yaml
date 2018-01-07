@@ -1,4 +1,4 @@
-## TODO: make this configurable through the helm chart
+{{- if not .Values.persistence.transcode.claimName }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -8,14 +8,19 @@ metadata:
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+    component: transcode
 spec:
   accessModes:
   - ReadWriteMany
   resources:
     requests:
-      storage: 10Gi
-  storageClassName: "nfs"
+      storage: {{ .Values.persistence.transcode.size | quote }}
+{{- if .Values.persistence.transcode.storageClass }}
+  storageClassName: {{ .Values.persistence.transcode.storageClass | quote }}
+{{- end }}
 ---
+{{- end }}
+{{- if not .Values.persistence.config.claimName }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -25,14 +30,19 @@ metadata:
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+    component: config
 spec:
   accessModes:
   - ReadWriteMany
   resources:
     requests:
-      storage: 5Gi
-  storageClassName: "nfs"
+      storage: {{ .Values.persistence.config.size | quote }}
+{{- if .Values.persistence.config.storageClass }}
+  storageClassName: {{ .Values.persistence.config.storageClass | quote }}
+{{- end }}
 ---
+{{- end }}
+{{- if not .Values.persistence.data.claimName }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -42,13 +52,15 @@ metadata:
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+    component: data
 spec:
   accessModes:
   - ReadWriteMany
   resources:
     requests:
-      storage: 5Gi
-  selector:
-    matchLabels:
-      name: pms-data
-  storageClassName: ""
+      storage: {{ .Values.persistence.data.size | quote }}
+{{- if .Values.persistence.data.storageClass }}
+  storageClassName: {{ .Values.persistence.data.storageClass | quote }}
+{{- end }}
+---
+{{- end }}

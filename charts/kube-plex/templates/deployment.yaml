@@ -71,11 +71,23 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: TRANSCODE_PVC
+{{- if .Values.persistence.transcode.claimName }}
+          value: "{{ .Values.persistence.transcode.claimName }}"
+{{- else }}
           value: "{{ template "fullname" . }}-transcode"
+{{- end }}
         - name: DATA_PVC
+{{- if .Values.persistence.data.claimName }}
+          value: "{{ .Values.persistence.data.claimName }}"
+{{- else }}
           value: "{{ template "fullname" . }}-data"
+{{- end }}
         - name: CONFIG_PVC
+{{- if .Values.persistence.config.claimName }}
+          value: "{{ .Values.persistence.config.claimName }}"
+{{- else }}
           value: "{{ template "fullname" . }}-config"
+{{- end }}
         volumeMounts:
         - name: data
           mountPath: /data
@@ -94,12 +106,24 @@ spec:
       volumes:
       - name: data
         persistentVolumeClaim:
+{{- if .Values.persistence.data.claimName }}
+          claimName: "{{ .Values.persistence.data.claimName }}"
+{{- else }}
           claimName: "{{ template "fullname" . }}-data"
+{{- end }}
       - name: config
         persistentVolumeClaim:
+{{- if .Values.persistence.config.claimName }}
+          claimName: "{{ .Values.persistence.config.claimName }}"
+{{- else }}
           claimName: "{{ template "fullname" . }}-config"
+{{- end }}
       - name: transcode
         persistentVolumeClaim:
+{{- if .Values.persistence.transcode.claimName }}
+          claimName: "{{ .Values.persistence.transcode.claimName }}"
+{{- else }}
           claimName: "{{ template "fullname" . }}-transcode"
+{{- end }}
       - name: shared
         emptyDir: {}
