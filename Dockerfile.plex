@@ -1,7 +1,0 @@
-# Let's not reinvent the wheel
-FROM timhaak/plex:latest
-
-RUN mkdir /var/log/plex
-
-# Replace the Transcoder binary with our elastic transcoder
-ADD ["./plex-elastic-transcoder", "/usr/lib/plexmediaserver/Resources/Plex New Transcoder"]
