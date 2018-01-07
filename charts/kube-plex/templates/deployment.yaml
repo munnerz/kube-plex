@@ -21,7 +21,7 @@ spec:
         app: {{ template "name" . }}
         release: {{ .Release.Name }}
     spec:
-      serviceAccountName: "{{ template "fullname" . }}"
+      serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}{{ .Values.rbac.serviceAccountName | quote }}{{ end }}
       hostname: "{{ template "fullname" . }}"
       initContainers:
       - name: kube-plex-install

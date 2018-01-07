@@ -31,6 +31,12 @@ ingress:
     #   hosts:
     #     - chart-example.local
 
+rbac:
+  create: true
+  # Specify create: false and serviceAccountName to manually manage the service
+  # account for this deployment
+  ## serviceAccountName: ""
+
 persistence:
   transcode:
     # Optionally specify claimName to manually override the PVC to be used for
