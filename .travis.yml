@@ -1,29 +1,22 @@
-# Use the new Container based KVM stack which allows "sudo" access
 dist: trusty
-
 sudo: required
-
 language: go
 
-only:
-  - master
-
 go:
-  - 1.6
+- 1.9
 
 services:
-    - docker
+- docker
 
 install:
-  - true
+- true
 
 script:
-  - go test -cpu=2 -race -v -covermode=atomic ./...
+- go test -cpu=2 -race -v -covermode=atomic $(go list ./... | grep -v /vendor/)
 
-# Run rolling update
-after_success:
-  - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o plex-elastic-transcoder github.com/munnerz/plex-elastic-transcoder
-  - docker build -t munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} -f Dockerfile.plex .
-  - docker tag -f munnerz/elastic-plex:${TRAVIS_COMMIT:0:7} "munnerz/elastic-plex:latest"
-  - docker push munnerz/elastic-plex:latest
-  - docker push munnerz/elastic-plex:${TRAVIS_COMMIT:0:7}
+# after_success:
+# - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kube-plex github.com/munnerz/kube-plex
+# - docker build -t quay.io/munnerz/kube-plex:${TRAVIS_COMMIT:0:7} .
+# - docker tag -f quay.io/munnerz/kube-plex:${TRAVIS_COMMIT:0:7} "quay.io/munnerz/kube-plex:latest"
+# - docker push quay.io/munnerz/kube-plex:latest
+# - docker push quay.io/munnerz/kube-plex:${TRAVIS_COMMIT:0:7}

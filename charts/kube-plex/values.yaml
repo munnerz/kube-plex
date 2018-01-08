@@ -1,0 +1,88 @@
+# Default values for kube-plex.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+image:
+  repository: plexinc/pms-docker
+  tag: 1.10.1.4602-f54242b6b
+  pullPolicy: IfNotPresent
+
+kubePlexImage:
+  repository: quay.io/munnerz/kube-plex
+  tag: latest
+  pullPolicy: Always
+
+# Override this with the plex claim token from plex.tv/claim
+claimToken: ""
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: false
+  # Used to create an Ingress record.
+  hosts:
+    - chart-example.local
+  annotations:
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  tls:
+    # Secrets must be manually created in the namespace.
+    # - secretName: chart-example-tls
+    #   hosts:
+    #     - chart-example.local
+
+rbac:
+  create: true
+  # Specify create: false and serviceAccountName to manually manage the service
+  # account for this deployment
+  ## serviceAccountName: ""
+
+persistence:
+  transcode:
+    # Optionally specify claimName to manually override the PVC to be used for
+    # the transcode directory. If claimName is specified, storageClass and size
+    # are ignored.
+    ## claimName: "plex-transcode-pvc"
+    # Optionally specify a storage class to be used for the transcode directory.
+    # If not specified and claimName is not specified, the default storage
+    # class will be used.
+    storageClass: ""
+    # The requested size of the volume to be used when creating a
+    # PersistentVolumeClaim.
+    size: 20Gi
+  data:
+    # Optionally specify claimName to manually override the PVC to be used for
+    # the data directory. If claimName is specified, storageClass and size are
+    # ignored.
+    ## claimName: "plex-data-pvc"
+    # Optionally specify a storage class to be used for the data directory.
+    # If not specified and claimName is not specified, the default storage
+    # class will be used.
+    storageClass: ""
+    # The requested size of the volume to be used when creating a
+    # PersistentVolumeClaim.
+    size: 40Gi
+  config:
+    # Optionally specify claimName to manually override the PVC to be used for
+    # the config directory. If claimName is specified, storageClass and size
+    # are ignored.
+    ## claimName: "plex-config-pvc"
+    # Optionally specify a storage class to be used for the config directory.
+    # If not specified and claimName is not specified, the default storage
+    # class will be used.
+    storageClass: ""
+    # The requested size of the volume to be used when creating a
+    # PersistentVolumeClaim.
+    size: 20Gi
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
