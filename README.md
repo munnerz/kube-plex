@@ -33,23 +33,30 @@ in pods created in the same 'plex' namespace.
 This will be used to bind your new PMS instance to your own user account
 automatically.
 
-2) Deploy the Helm chart included in this repository:
+2) Deploy the Helm chart included in this repository using the claim token
+obtained in step 1. If you have pre-existing peristent volume claims for your
+media, you can specify its name with `--set persistence.data.claimName`. If not
+specified, a persistent volume will be automatically provisioned for you.
 
 ```bash
 ➜  helm install ./charts/kube-plex --name plex \
     --namespace plex \
-    --set claimToken=[insert claim token here]
+    --set claimToken=[insert claim token here] \
+    --set persistence.data.claimName=existing-pms-data-pvc \
+    --set ingress.enabled=true
 ```
 
-This will deploy a scalable Plex Media Server instance.
+This will deploy a scalable Plex Media Server instance that uses Kubernetes as
+a backend for executing transcode jobs.
 
-3) Access the Plex dashboard, either using `kubectl port-forward` or via your
-services LoadBalancer IP address. Set up your Plex server and appropriate media.
+3) Access the Plex dashboard, either using `kubectl port-forward`, or using
+the services LoadBalancer IP (via `kubectl get service`), or alternatively use
+the ingress provisioned in the previous step (with `--set ingress.enabled=true`).
 
 4) Visit Settings->Server->Network and add your pod network subnet to the
 `List of IP addresses and networks that are allowed without auth` (near the
 bottom). For example, `10.100.0.0/16` is the subnet that pods in my cluster are
-assigned IPs from.
+assigned IPs from, so I enter `10.100.0.0/16` in the box.
 
 You should now be able to play media from your PMS instance - pods will be
 created to handle transcodes, and data automatically mounted in appropriately:
