@@ -1,0 +1,39 @@
+workspace:
+  base: /go
+  path: src/github.com/munnerz/kube-plex
+
+pipeline:
+  build:
+    image: golang:latest
+    commands:
+    - go test -cpu=2 -race -v -covermode=atomic $(go list ./... | grep -v /vendor/)
+    - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kube-plex_linux_amd64 github.com/munnerz/kube-plex
+
+  publish:
+    image: plugins/docker
+    secrets: [ DOCKER_USERNAME, DOCKER_PASSWORD ]
+    repo: justinbarrick/kube-plex
+    tags:
+    - latest
+    - ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
+    when:
+      branch: master
+
+  helm_deploy:
+    image: quay.io/ipedrazas/drone-helm
+    skip_tls_verify: true
+    chart: ./charts/kube-plex
+    release: kube-plex
+    values: kubePlexImage.tag=${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7},claimToken=$KUBE_PLEX_CLAIM
+    values_files: kube.yaml
+    secrets: [ PROD_KUBERNETES_CERT, PROD_KUBERNETES_TOKEN, PROD_SERVICE_ACCOUNT, PROD_API_SERVER, PROD_KUBE_PLEX_CLAIM ]
+    prefix: PROD
+    when:
+      branch: master
+
+  slack:
+    image: plugins/slack
+    webhook: https://hooks.slack.com/services/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
+    channel: kubernetes
+    when:
+      status: [success, failure]
