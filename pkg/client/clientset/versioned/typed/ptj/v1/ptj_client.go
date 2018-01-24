@@ -23,22 +23,22 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type PlextranscodejobsV1Interface interface {
+type KubeplexV1Interface interface {
 	RESTClient() rest.Interface
 	PlexTranscodeJobsGetter
 }
 
-// PlextranscodejobsV1Client is used to interact with features provided by the plextranscodejobs.kube-plex.munnerz.github.com group.
-type PlextranscodejobsV1Client struct {
+// KubeplexV1Client is used to interact with features provided by the kubeplex.munnerz.github.com group.
+type KubeplexV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *PlextranscodejobsV1Client) PlexTranscodeJobs(namespace string) PlexTranscodeJobInterface {
+func (c *KubeplexV1Client) PlexTranscodeJobs(namespace string) PlexTranscodeJobInterface {
 	return newPlexTranscodeJobs(c, namespace)
 }
 
-// NewForConfig creates a new PlextranscodejobsV1Client for the given config.
-func NewForConfig(c *rest.Config) (*PlextranscodejobsV1Client, error) {
+// NewForConfig creates a new KubeplexV1Client for the given config.
+func NewForConfig(c *rest.Config) (*KubeplexV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -47,12 +47,12 @@ func NewForConfig(c *rest.Config) (*PlextranscodejobsV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PlextranscodejobsV1Client{client}, nil
+	return &KubeplexV1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new PlextranscodejobsV1Client for the given config and
+// NewForConfigOrDie creates a new KubeplexV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *PlextranscodejobsV1Client {
+func NewForConfigOrDie(c *rest.Config) *KubeplexV1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -60,9 +60,9 @@ func NewForConfigOrDie(c *rest.Config) *PlextranscodejobsV1Client {
 	return client
 }
 
-// New creates a new PlextranscodejobsV1Client for the given RESTClient.
-func New(c rest.Interface) *PlextranscodejobsV1Client {
-	return &PlextranscodejobsV1Client{c}
+// New creates a new KubeplexV1Client for the given RESTClient.
+func New(c rest.Interface) *KubeplexV1Client {
+	return &KubeplexV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -80,7 +80,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *PlextranscodejobsV1Client) RESTClient() rest.Interface {
+func (c *KubeplexV1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

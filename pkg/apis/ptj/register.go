@@ -17,5 +17,5 @@ limitations under the License.
 package ptj
 
 const (
-	GroupName = "plextranscodejobs.kube-plex.munnerz.github.com"
+	GroupName = "kubeplex.munnerz.github.com"
 )

@@ -17,7 +17,7 @@ limitations under the License.
 package fake
 
 import (
-	plextranscodejobsv1 "github.com/munnerz/kube-plex/pkg/apis/ptj/v1"
+	kubeplexv1 "github.com/munnerz/kube-plex/pkg/apis/ptj/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -48,6 +48,6 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	plextranscodejobsv1.AddToScheme(scheme)
+	kubeplexv1.AddToScheme(scheme)
 
 }

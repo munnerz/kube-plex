@@ -28,13 +28,13 @@ import (
 
 // FakePlexTranscodeJobs implements PlexTranscodeJobInterface
 type FakePlexTranscodeJobs struct {
-	Fake *FakePlextranscodejobsV1
+	Fake *FakeKubeplexV1
 	ns   string
 }
 
-var plextranscodejobsResource = schema.GroupVersionResource{Group: "plextranscodejobs.kube-plex.munnerz.github.com", Version: "v1", Resource: "plextranscodejobs"}
+var plextranscodejobsResource = schema.GroupVersionResource{Group: "kubeplex.munnerz.github.com", Version: "v1", Resource: "plextranscodejobs"}
 
-var plextranscodejobsKind = schema.GroupVersionKind{Group: "plextranscodejobs.kube-plex.munnerz.github.com", Version: "v1", Kind: "PlexTranscodeJob"}
+var plextranscodejobsKind = schema.GroupVersionKind{Group: "kubeplex.munnerz.github.com", Version: "v1", Kind: "PlexTranscodeJob"}
 
 // Get takes name of the plexTranscodeJob, and returns the corresponding plexTranscodeJob object, and an error if there is any.
 func (c *FakePlexTranscodeJobs) Get(name string, options v1.GetOptions) (result *ptj_v1.PlexTranscodeJob, err error) {

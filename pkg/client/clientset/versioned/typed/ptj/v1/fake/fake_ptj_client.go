@@ -22,17 +22,17 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-type FakePlextranscodejobsV1 struct {
+type FakeKubeplexV1 struct {
 	*testing.Fake
 }
 
-func (c *FakePlextranscodejobsV1) PlexTranscodeJobs(namespace string) v1.PlexTranscodeJobInterface {
+func (c *FakeKubeplexV1) PlexTranscodeJobs(namespace string) v1.PlexTranscodeJobInterface {
 	return &FakePlexTranscodeJobs{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakePlextranscodejobsV1) RESTClient() rest.Interface {
+func (c *FakeKubeplexV1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

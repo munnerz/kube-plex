@@ -61,13 +61,13 @@ func NewFilteredPlexTranscodeJobInformer(client versioned.Interface, namespace s
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.PlextranscodejobsV1().PlexTranscodeJobs(namespace).List(options)
+				return client.KubeplexV1().PlexTranscodeJobs(namespace).List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.PlextranscodejobsV1().PlexTranscodeJobs(namespace).Watch(options)
+				return client.KubeplexV1().PlexTranscodeJobs(namespace).Watch(options)
 			},
 		},
 		&ptj_v1.PlexTranscodeJob{},

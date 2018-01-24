@@ -123,9 +123,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Plextranscodejobs() ptj.Interface
+	Kubeplex() ptj.Interface
 }
 
-func (f *sharedInformerFactory) Plextranscodejobs() ptj.Interface {
+func (f *sharedInformerFactory) Kubeplex() ptj.Interface {
 	return ptj.New(f, f.namespace, f.tweakListOptions)
 }

@@ -52,7 +52,7 @@ type plexTranscodeJobs struct {
 }
 
 // newPlexTranscodeJobs returns a PlexTranscodeJobs
-func newPlexTranscodeJobs(c *PlextranscodejobsV1Client, namespace string) *plexTranscodeJobs {
+func newPlexTranscodeJobs(c *KubeplexV1Client, namespace string) *plexTranscodeJobs {
 	return &plexTranscodeJobs{
 		client: c.RESTClient(),
 		ns:     namespace,

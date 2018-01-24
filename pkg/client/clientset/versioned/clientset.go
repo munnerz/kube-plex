@@ -18,7 +18,7 @@ package versioned
 
 import (
 	glog "github.com/golang/glog"
-	plextranscodejobsv1 "github.com/munnerz/kube-plex/pkg/client/clientset/versioned/typed/ptj/v1"
+	kubeplexv1 "github.com/munnerz/kube-plex/pkg/client/clientset/versioned/typed/ptj/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -26,27 +26,27 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	PlextranscodejobsV1() plextranscodejobsv1.PlextranscodejobsV1Interface
+	KubeplexV1() kubeplexv1.KubeplexV1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Plextranscodejobs() plextranscodejobsv1.PlextranscodejobsV1Interface
+	Kubeplex() kubeplexv1.KubeplexV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	plextranscodejobsV1 *plextranscodejobsv1.PlextranscodejobsV1Client
+	kubeplexV1 *kubeplexv1.KubeplexV1Client
 }
 
-// PlextranscodejobsV1 retrieves the PlextranscodejobsV1Client
-func (c *Clientset) PlextranscodejobsV1() plextranscodejobsv1.PlextranscodejobsV1Interface {
-	return c.plextranscodejobsV1
+// KubeplexV1 retrieves the KubeplexV1Client
+func (c *Clientset) KubeplexV1() kubeplexv1.KubeplexV1Interface {
+	return c.kubeplexV1
 }
 
-// Deprecated: Plextranscodejobs retrieves the default version of PlextranscodejobsClient.
+// Deprecated: Kubeplex retrieves the default version of KubeplexClient.
 // Please explicitly pick a version.
-func (c *Clientset) Plextranscodejobs() plextranscodejobsv1.PlextranscodejobsV1Interface {
-	return c.plextranscodejobsV1
+func (c *Clientset) Kubeplex() kubeplexv1.KubeplexV1Interface {
+	return c.kubeplexV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -65,7 +65,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.plextranscodejobsV1, err = plextranscodejobsv1.NewForConfig(&configShallowCopy)
+	cs.kubeplexV1, err = kubeplexv1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.plextranscodejobsV1 = plextranscodejobsv1.NewForConfigOrDie(c)
+	cs.kubeplexV1 = kubeplexv1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -91,7 +91,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.plextranscodejobsV1 = plextranscodejobsv1.New(c)
+	cs.kubeplexV1 = kubeplexv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

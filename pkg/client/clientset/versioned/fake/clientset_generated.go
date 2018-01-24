@@ -18,8 +18,8 @@ package fake
 
 import (
 	clientset "github.com/munnerz/kube-plex/pkg/client/clientset/versioned"
-	plextranscodejobsv1 "github.com/munnerz/kube-plex/pkg/client/clientset/versioned/typed/ptj/v1"
-	fakeplextranscodejobsv1 "github.com/munnerz/kube-plex/pkg/client/clientset/versioned/typed/ptj/v1/fake"
+	kubeplexv1 "github.com/munnerz/kube-plex/pkg/client/clientset/versioned/typed/ptj/v1"
+	fakekubeplexv1 "github.com/munnerz/kube-plex/pkg/client/clientset/versioned/typed/ptj/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -68,12 +68,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// PlextranscodejobsV1 retrieves the PlextranscodejobsV1Client
-func (c *Clientset) PlextranscodejobsV1() plextranscodejobsv1.PlextranscodejobsV1Interface {
-	return &fakeplextranscodejobsv1.FakePlextranscodejobsV1{Fake: &c.Fake}
+// KubeplexV1 retrieves the KubeplexV1Client
+func (c *Clientset) KubeplexV1() kubeplexv1.KubeplexV1Interface {
+	return &fakekubeplexv1.FakeKubeplexV1{Fake: &c.Fake}
 }
 
-// Plextranscodejobs retrieves the PlextranscodejobsV1Client
-func (c *Clientset) Plextranscodejobs() plextranscodejobsv1.PlextranscodejobsV1Interface {
-	return &fakeplextranscodejobsv1.FakePlextranscodejobsV1{Fake: &c.Fake}
+// Kubeplex retrieves the KubeplexV1Client
+func (c *Clientset) Kubeplex() kubeplexv1.KubeplexV1Interface {
+	return &fakekubeplexv1.FakeKubeplexV1{Fake: &c.Fake}
 }
