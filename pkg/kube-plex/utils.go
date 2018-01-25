@@ -1,24 +1,11 @@
 package kubeplex
 
 import (
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"strings"
 	"os"
+	"strings"
 )
 
 var pmsInternalAddress = os.Getenv("PMS_INTERNAL_ADDRESS")
-
-func KubeClient() (cfg *rest.Config, clientset *kubernetes.Clientset, err error) {
-	cfg, err = clientcmd.BuildConfigFromFlags("", "/home/user/.secrets/clusters/codesink/auth/kubeconfig")
-	if err != nil {
-		return
-	}
-
-	clientset, err = kubernetes.NewForConfig(cfg)
-	return
-}
 
 func RewriteArgs(in []string) {
 	for i, v := range in {

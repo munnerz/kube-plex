@@ -3,18 +3,15 @@ package kubeplex
 import (
 	"errors"
 	"time"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/util/runtime"
 
-	clientset "github.com/munnerz/kube-plex/pkg/client/clientset/versioned"
 	informers "github.com/munnerz/kube-plex/pkg/client/informers/externalversions"
 )
 
 type Controller struct {
 	Informer cache.SharedIndexInformer
-	KubeplexClient clientset.Interface
-	KubeClient kubernetes.Interface
+	KubeClient *KubeClient
 	Stop chan struct{}
 }
 
@@ -32,13 +29,15 @@ func (c *Controller) Run() error {
 	return nil
 }
 
-func NewController(kubeClient kubernetes.Interface, kubeplexClient clientset.Interface) Controller {
-	kubeplexInformerFactory := informers.NewSharedInformerFactory(kubeplexClient, time.Second*30)
+func (c *Controller) AddEventHandler(handlers cache.ResourceEventHandlerFuncs) {
+	c.Informer.AddEventHandler(handlers)
+}
 
+func NewController(kubeClient *KubeClient) Controller {
+	kubeplexInformerFactory := informers.NewSharedInformerFactory(kubeClient.KubeplexClient, time.Second*30)
 	kubeplexInformer := kubeplexInformerFactory.Kubeplex().V1().PlexTranscodeJobs()
 
 	c := Controller{
-		KubeplexClient: kubeplexClient,
 		KubeClient: kubeClient,
 		Informer: kubeplexInformer.Informer(),
 		Stop: make(chan struct{}),

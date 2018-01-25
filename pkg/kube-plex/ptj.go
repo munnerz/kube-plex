@@ -1,8 +1,9 @@
 package kubeplex
 
 import (
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    ptjv1 "github.com/munnerz/kube-plex/pkg/apis/ptj/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ptjv1 "github.com/munnerz/kube-plex/pkg/apis/ptj/v1"
+	"os/exec"
 )
 
 func GeneratePlexTranscodeJob(args []string) ptjv1.PlexTranscodeJob {
@@ -19,15 +20,31 @@ func GeneratePlexTranscodeJob(args []string) ptjv1.PlexTranscodeJob {
     }
 }
 
-func (c Controller) UpdatePlexTranscodeJobState(jobname string, state ptjv1.PlexTranscodeJobState) (job *ptjv1.PlexTranscodeJob, err error) {
-    ptjs := c.KubeplexClient.KubeplexV1().PlexTranscodeJobs("kube-plex")
+func GetPlexTranscodeJob(kubeClient *KubeClient, jobname string) (ptj *ptjv1.PlexTranscodeJob, err error) {
+	ptjs := kubeClient.KubeplexClient.KubeplexV1().PlexTranscodeJobs("kube-plex")
 
-    job, err = ptjs.Get(jobname, metav1.GetOptions{})
-    if err != nil {
-        return
-    }
+	return ptjs.Get(jobname, metav1.GetOptions{})
+}
 
-    job.Status.State = state
-    job, err = ptjs.Update(job)
-    return
+func CreatePlexTranscodeJob(ptj *ptjv1.PlexTranscodeJob, kubeClient *KubeClient) (*ptjv1.PlexTranscodeJob, error) {
+	ptjs := kubeClient.KubeplexClient.KubeplexV1().PlexTranscodeJobs("kube-plex")
+	return ptjs.Create(ptj)
+}
+
+func UpdatePlexTranscodeJobState(ptj *ptjv1.PlexTranscodeJob, state ptjv1.PlexTranscodeJobState, kubeClient *KubeClient) (*ptjv1.PlexTranscodeJob, error) {
+	ptjs := kubeClient.KubeplexClient.KubeplexV1().PlexTranscodeJobs("kube-plex")
+
+	ptj.Status.State = state
+	return ptjs.Update(ptj)
+}
+
+func RunPlexTranscodeJob(ptj *ptjv1.PlexTranscodeJob) ptjv1.PlexTranscodeJobState {
+	args := ptj.Spec.Args[1:len(ptj.Spec.Args)]
+	cmd := ptj.Spec.Args[0]
+
+	if exec.Command(cmd, args...).Run() != nil {
+		return ptjv1.PlexTranscodeStateFailed
+	} else {
+		return ptjv1.PlexTranscodeStateCompleted
+	}
 }
