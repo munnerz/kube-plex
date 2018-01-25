@@ -17,7 +17,7 @@ type KubeClient struct {
 func NewKubeClient() (kc *KubeClient, err error) {
 	kc = new(KubeClient)
 
-	kc.Cfg, err = clientcmd.BuildConfigFromFlags("", "/home/user/.secrets/clusters/codesink/auth/kubeconfig")
+	kc.Cfg, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
 		return
 	}
