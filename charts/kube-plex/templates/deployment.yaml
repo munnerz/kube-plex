@@ -88,6 +88,8 @@ spec:
 {{- else }}
           value: "{{ template "fullname" . }}-config"
 {{- end }}
+        - name: KUBEPLEX_ENV
+          value: executor
         volumeMounts:
         - name: data
           mountPath: /data
@@ -207,6 +209,8 @@ spec:
 {{- else }}
           value: "{{ template "fullname" . }}-config"
 {{- end }}
+        - name: KUBEPLEX_ENV
+          value: worker
         volumeMounts:
         - name: data
           mountPath: /data

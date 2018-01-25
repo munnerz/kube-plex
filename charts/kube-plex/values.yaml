@@ -8,7 +8,7 @@ image:
 
 kubePlexImage:
   repository: justinbarrick/kubeplex
-  tag: 3
+  tag: 4
   pullPolicy: Always
 
 # Override this with the plex claim token from plex.tv/claim

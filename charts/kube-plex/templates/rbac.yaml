@@ -26,6 +26,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - kubeplex.munnerz.github.com
+  resources:
+  - plextranscodejobs
+  verbs:
+  - "*"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
