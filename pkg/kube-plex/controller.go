@@ -34,7 +34,7 @@ func (c *Controller) AddEventHandler(handlers cache.ResourceEventHandlerFuncs) {
 }
 
 func NewController(kubeClient *KubeClient) Controller {
-	kubeplexInformerFactory := informers.NewSharedInformerFactory(kubeClient.KubeplexClient, time.Second*30)
+	kubeplexInformerFactory := informers.NewFilteredSharedInformerFactory(kubeClient.KubeplexClient, time.Second*30, "kube-plex", nil)
 	kubeplexInformer := kubeplexInformerFactory.Kubeplex().V1().PlexTranscodeJobs()
 
 	c := Controller{

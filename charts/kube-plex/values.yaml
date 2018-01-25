@@ -7,8 +7,8 @@ image:
   pullPolicy: IfNotPresent
 
 kubePlexImage:
-  repository: quay.io/munnerz/kube-plex
-  tag: latest
+  repository: justinbarrick/kubeplex
+  tag: 3
   pullPolicy: Always
 
 # Override this with the plex claim token from plex.tv/claim
