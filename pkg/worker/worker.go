@@ -10,12 +10,16 @@ import (
 
 const myPodName = "helloworld"
 
+func isMyJob(ptj *ptjv1.PlexTranscodeJob) bool {
+	return ptj.Status.Transcoder == myPodName
+}
+
 func Run(controller kubeplex.Controller) error {
 	controller.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
 			updated := new.(*ptjv1.PlexTranscodeJob)
 
-			if updated.Status.Transcoder != myPodName {
+			if isMyJob(updated) != true {
 				return
 			}
 
@@ -26,6 +30,7 @@ func Run(controller kubeplex.Controller) error {
 			log.Println("Got job assigned to us!")
 			updated.Status.State, updated.Status.Error = kubeplex.RunPlexTranscodeJob(updated)
 			kubeplex.UpdatePlexTranscodeJob(updated, controller.KubeClient)
+			log.Println("Updated job status.")
 		},
 	})
 
