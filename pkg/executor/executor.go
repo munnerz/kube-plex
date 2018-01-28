@@ -32,8 +32,7 @@ func Run(controller kubeplex.Controller) error {
 
 			fmt.Println(updated.ObjectMeta.Name, updated.Status.State)
 			if updated.Status.State == ptjv1.PlexTranscodeStateCompleted {
-				// why doesn't this shut it down?
-				controller.Stop <- struct{}{}
+				close(controller.Stop)
 			}
 		},
 	})

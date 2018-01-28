@@ -5,29 +5,16 @@ import (
 	"os"
 	"testing"
 	"time"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/munnerz/kube-plex/pkg/kube-plex"
 	ptjv1 "github.com/munnerz/kube-plex/pkg/apis/ptj/v1"
-	fakekubeplex "github.com/munnerz/kube-plex/pkg/client/clientset/versioned/fake"
-	fakekubernetes "k8s.io/client-go/kubernetes/fake"
+	"github.com/munnerz/kube-plex/pkg/kube-plex/fake"
 )
-
-func newFakeController(objects ...runtime.Object) kubeplex.Controller {
-	kc := kubeplex.KubeClient{
-		Clientset: fakekubernetes.NewSimpleClientset(),
-		KubeplexClient: fakekubeplex.NewSimpleClientset(objects...),
-	}
-
-	controller := kubeplex.NewController(&kc)
-	go controller.Run()
-	return controller
-}
 
 func TestWorkerJobSuccess(t *testing.T) {
 	ptj := kubeplex.GeneratePlexTranscodeJob([]string{"/bin/touch", "/tmp/test"}, []string{})
-	controller := newFakeController(&ptj)
+	controller := fake.NewFakeController(&ptj)
 
 	controller.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
@@ -58,7 +45,7 @@ func TestWorkerJobSuccess(t *testing.T) {
 
 func TestWorkerJobFailure(t *testing.T) {
 	ptj := kubeplex.GeneratePlexTranscodeJob([]string{"/bin/cat", "/does/not/exist"}, []string{})
-	controller := newFakeController(&ptj)
+	controller := fake.NewFakeController(&ptj)
 
 	controller.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
@@ -88,7 +75,7 @@ func TestWorkerJobFailure(t *testing.T) {
 
 func TestWorkerJobAssignedToOtherWorker(t *testing.T) {
 	ptj := kubeplex.GeneratePlexTranscodeJob([]string{"/bin/touch", "/tmp/mytest"}, []string{})
-	controller := newFakeController(&ptj)
+	controller := fake.NewFakeController(&ptj)
 
 	controller.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new interface{}) {
