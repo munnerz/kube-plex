@@ -19,6 +19,7 @@ type PlexTranscodeJob struct {
 type PlexTranscodeJobSpec struct {
 	// An array of arguments to pass to the real plex transcode binary
 	Args []string
+	Env []string
 }
 
 type PlexTranscodeJobStatus struct {
@@ -26,6 +27,7 @@ type PlexTranscodeJobStatus struct {
 	Transcoder string
 	// The state of the job, one of: CREATED ASSIGNED STARTED FAILED COMPLETED
 	State PlexTranscodeJobState
+	Error string
 }
 
 type PlexTranscodeJobState string

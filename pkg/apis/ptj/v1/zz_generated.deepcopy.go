@@ -95,6 +95,11 @@ func (in *PlexTranscodeJobSpec) DeepCopyInto(out *PlexTranscodeJobSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Env != nil {
+		in, out := &in.Env, &out.Env
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

@@ -12,7 +12,7 @@ import (
 
 type KubeClient struct {
 	Cfg *rest.Config
-	Clientset *kubernetes.Clientset
+	Clientset kubernetes.Interface
 	KubeplexClient clientset.Interface
 }
 
