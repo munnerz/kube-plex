@@ -16,7 +16,9 @@ func Run(controller kubeplex.Controller) error {
 	args := os.Args
 	kubeplex.RewriteArgs(args)
 
-	ptj := kubeplex.GeneratePlexTranscodeJob(args, env)
+	dir, _ := os.Getwd()
+
+	ptj := kubeplex.GeneratePlexTranscodeJob(args, env, dir)
 	new_ptj, err := kubeplex.CreatePlexTranscodeJob(&ptj, controller.KubeClient)
 	if err != nil {
 		return err

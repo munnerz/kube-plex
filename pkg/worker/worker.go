@@ -27,6 +27,10 @@ func Run(controller kubeplex.Controller) error {
 				return
 			}
 
+			log.Println("Marking job started")
+			updated.Status.State =  ptjv1.PlexTranscodeStateStarted
+			kubeplex.UpdatePlexTranscodeJob(updated, controller.KubeClient)
+
 			log.Println("Running job: ", updated.ObjectMeta.Name)
 			updated.Status.State, updated.Status.Error = kubeplex.RunPlexTranscodeJob(updated)
 			kubeplex.UpdatePlexTranscodeJob(updated, controller.KubeClient)

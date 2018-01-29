@@ -11,6 +11,7 @@ func NewFakeController(objects ...runtime.Object) kubeplex.Controller {
 	kc := kubeplex.KubeClient{
 		Clientset: fakekubernetes.NewSimpleClientset(),
 		KubeplexClient: fakekubeplex.NewSimpleClientset(objects...),
+		Namespace: "myfakenamespace",
 	}
 
 	controller := kubeplex.NewController(&kc)

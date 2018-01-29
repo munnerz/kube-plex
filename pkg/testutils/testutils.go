@@ -44,9 +44,12 @@ func CanaryCommand() {
 	f, _ := os.Create(os.Getenv("OUTPUT_FILE"))
 	w := bufio.NewWriter(f)
 
+	cwd, _ := os.Getwd()
+
 	json.NewEncoder(w).Encode(map[string][]string{
 		"environment": os.Environ(),
 		"args": os.Args,
+		"cwd": []string{cwd},
 	})
 
 	w.Flush()

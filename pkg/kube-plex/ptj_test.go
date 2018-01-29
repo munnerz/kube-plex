@@ -20,7 +20,7 @@ func TestRunPlexTranscodeJob(t *testing.T) {
 		os.Args[0], "-test.run=TestCommandExecution", "--", "my", "arguments",
 	}
 
-	ptj := GeneratePlexTranscodeJob(args, env)
+	ptj := GeneratePlexTranscodeJob(args, env, "/tmp")
 
 	state, stderr := RunPlexTranscodeJob(&ptj)
 	assert.Equal(t, ptjv1.PlexTranscodeStateCompleted, state, "Should be completed")
@@ -30,6 +30,7 @@ func TestRunPlexTranscodeJob(t *testing.T) {
 	assert.Equal(t, nil, err, "err should be empty")
 	assert.Equal(t, env, output["environment"], "environment variables should match")
 	assert.Equal(t, args, output["args"], "args should match")
+	assert.Equal(t, "/tmp", output["cwd"][0], "args should match")
 }
 
 func TestRunPlexTranscodeJobCommandFails(t *testing.T) {
@@ -41,11 +42,11 @@ func TestRunPlexTranscodeJobCommandFails(t *testing.T) {
 		os.Args[0], "-test.run=TestCommandExecution", "--", "my", "arguments",
 	}
 
-	ptj := GeneratePlexTranscodeJob(args, env)
+	ptj := GeneratePlexTranscodeJob(args, env, "/tmp")
 
 	state, stderr := RunPlexTranscodeJob(&ptj)
 	assert.Equal(t, ptjv1.PlexTranscodeStateFailed, state, "Should be failed")
-	assert.Equal(t, "", stderr, "Stderr should be empty")
+	assert.Equal(t, "exit status 1", stderr, "Stderr should be empty")
 
 	output, err := testutils.ReadJson(filename)
 	assert.Equal(t, nil, err, "err should be empty")

@@ -59,6 +59,8 @@ func TestWorkerJobFailure(t *testing.T) {
 				controller.Shutdown()
 			} else if updated.Status.State == ptjv1.PlexTranscodeStateAssigned {
 				return
+			} else if updated.Status.State == ptjv1.PlexTranscodeStateStarted {
+				return
 			} else {
 				t.Error("State is not ASSIGNED or FAILED: ", updated.Status.State)
 			}
@@ -111,3 +113,45 @@ func TestWorkerJobAssignedToOtherWorker(t *testing.T) {
 	_, err := os.Stat(tmpfile)
 	assert.NotEqual(t, nil, err, tmpfile + " should not exist!")
 }
+
+func TestWorkerJobStarted(t *testing.T) {
+	tmpfile := testutils.RandomPath()
+
+	ptj := kubeplex.GeneratePlexTranscodeJob([]string{"/bin/touch", tmpfile}, []string{})
+	controller := fake.NewFakeController(&ptj)
+
+	jobStarted := false
+
+	controller.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(old, new interface{}) {
+			updated := new.(*ptjv1.PlexTranscodeJob)
+
+			log.Println("status", updated.Status.State)
+
+			if updated.Status.State == ptjv1.PlexTranscodeStateStarted {
+				jobStarted = true
+			}
+
+			if updated.Status.State != ptjv1.PlexTranscodeStateCompleted {
+				return
+			}
+
+			_, err := os.Stat(tmpfile)
+			assert.Equal(t, nil, err, tmpfile + " should exist!")
+			controller.Shutdown()
+		},
+	})
+
+	Run(controller)
+
+	new_ptj, _ := kubeplex.CreatePlexTranscodeJob(&ptj, controller.KubeClient)
+
+	new_ptj.Status.State = ptjv1.PlexTranscodeStateAssigned
+	new_ptj.Status.Transcoder = "helloworld"
+	kubeplex.UpdatePlexTranscodeJob(new_ptj, controller.KubeClient)
+
+	<-controller.Stop
+	assert.Equal(t, true, jobStarted, "job should have transitioned to the started state.")
+}
+
+

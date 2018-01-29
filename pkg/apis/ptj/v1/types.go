@@ -20,6 +20,7 @@ type PlexTranscodeJobSpec struct {
 	// An array of arguments to pass to the real plex transcode binary
 	Args []string
 	Env []string
+	Cwd string
 }
 
 type PlexTranscodeJobStatus struct {

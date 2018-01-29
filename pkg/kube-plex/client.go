@@ -14,10 +14,16 @@ type KubeClient struct {
 	Cfg *rest.Config
 	Clientset kubernetes.Interface
 	KubeplexClient clientset.Interface
+	Namespace string
 }
 
 func NewKubeClient() (kc *KubeClient, err error) {
 	kc = new(KubeClient)
+
+	kc.Namespace = os.Getenv("KUBE_NAMESPACE")
+	if kc.Namespace == "" {
+		kc.Namespace = "kube-plex"
+	}
 
 	kc.Cfg, err = clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
