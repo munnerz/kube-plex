@@ -250,3 +250,52 @@ spec:
 {{- end }}
       - name: shared
         emptyDir: {}
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}-controller
+  labels:
+    name: {{ template "fullname" . }}-controller
+    app: {{ template "name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: {{ template "fullname" . }}-controller
+      app: {{ template "name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        name: {{ template "fullname" . }}-controller
+        app: {{ template "name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}{{ .Values.rbac.serviceAccountName | quote }}{{ end }}
+      containers:
+      - name: kubeplex-controller
+        image: "{{ .Values.kubePlexImage.repository }}:{{ .Values.kubePlexImage.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        # We replace the PMS binary with a postStart hook to save having to
+        # modify the default image entrypoint.
+        command:
+        - /kubeplex
+        env:
+        - name: KUBE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: KUBEPLEX_ENV
+          value: controller
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+    {{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+    {{- end }}
