@@ -4,6 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ptjv1 "github.com/munnerz/kube-plex/pkg/apis/ptj/v1"
 	"bytes"
+	"log"
 	"os/exec"
 )
 
@@ -46,9 +47,12 @@ func RunPlexTranscodeJob(ptj *ptjv1.PlexTranscodeJob) (ptjv1.PlexTranscodeJobSta
 
 	var stderr bytes.Buffer
 	command.Stderr = &stderr
+	var stdout bytes.Buffer
+	command.Stdout = &stdout
 	command.Env = ptj.Spec.Env
 
 	if command.Run() != nil {
+		log.Println(stdout.String())
 		return ptjv1.PlexTranscodeStateFailed, stderr.String()
 	} else {
 		return ptjv1.PlexTranscodeStateCompleted, ""

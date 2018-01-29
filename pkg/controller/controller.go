@@ -17,18 +17,21 @@ func Run(controller kubeplex.Controller) error {
 			updated := new.(*ptjv1.PlexTranscodeJob)
 
 			if updated.Status.State == ptjv1.PlexTranscodeStateFailed {
-				log.Println("Job failed: " + updated.Status.Error)
+				log.Println("Job failed: " + updated.ObjectMeta.Name)
 				return
 			}
 
-			if updated.Status.State != ptjv1.PlexTranscodeStateCreated {
+			if updated.Status.State == ptjv1.PlexTranscodeStateCompleted {
+				log.Println("Job completed: " + updated.ObjectMeta.Name)
+				return
+			} else if updated.Status.State != ptjv1.PlexTranscodeStateCreated {
 				return
 			}
 
-			log.Println("Assigned job to worker.")
 			updated.Status.State = ptjv1.PlexTranscodeStateAssigned
 			updated.Status.Transcoder = IdlePods[0]
 			kubeplex.UpdatePlexTranscodeJob(updated, controller.KubeClient)
+			log.Println("Assigned job " + updated.ObjectMeta.Name + " to " + IdlePods[0])
 		},
 	})
 

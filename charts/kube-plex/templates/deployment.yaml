@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   name: {{ template "fullname" . }}
   labels:
+    instance: executor
     app: {{ template "name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
@@ -18,6 +19,7 @@ spec:
   template:
     metadata:
       labels:
+        instance: executor
         app: {{ template "name" . }}
         release: {{ .Release.Name }}
     spec:

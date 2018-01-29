@@ -11,10 +11,10 @@ import (
 )
 
 func Run(controller kubeplex.Controller) error {
+	env := os.Environ()
+
 	args := os.Args
 	kubeplex.RewriteArgs(args)
-
-	env := os.Environ()
 
 	ptj := kubeplex.GeneratePlexTranscodeJob(args, env)
 	new_ptj, err := kubeplex.CreatePlexTranscodeJob(&ptj, controller.KubeClient)

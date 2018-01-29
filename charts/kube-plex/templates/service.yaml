@@ -20,5 +20,6 @@ spec:
     port: 32400
     targetPort: 32400
   selector:
+    instance: executor
     app: {{ template "name" . }}
     release: {{ .Release.Name }}

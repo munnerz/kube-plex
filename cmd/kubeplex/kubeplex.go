@@ -17,7 +17,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("Creating controller.")
+	log.Println("Creating kube-plex.")
 	controller := kubeplex.NewController(kubeClient)
 
 	switch os.Getenv("KUBEPLEX_ENV") {
@@ -36,7 +36,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("Running controller.")
+	log.Println("Running kube-plex.")
 	go controller.Run()
 
 

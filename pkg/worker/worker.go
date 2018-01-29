@@ -27,10 +27,10 @@ func Run(controller kubeplex.Controller) error {
 				return
 			}
 
-			log.Println("Got job assigned to us!")
+			log.Println("Running job: ", updated.ObjectMeta.Name)
 			updated.Status.State, updated.Status.Error = kubeplex.RunPlexTranscodeJob(updated)
 			kubeplex.UpdatePlexTranscodeJob(updated, controller.KubeClient)
-			log.Println("Updated job status.")
+			log.Println("Updated job status for ", updated.ObjectMeta.Name, ": ", updated.Status.State)
 		},
 	})
 
