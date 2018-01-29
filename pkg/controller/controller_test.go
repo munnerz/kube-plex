@@ -21,7 +21,7 @@ func TestControllerAssignsJobs(t *testing.T) {
 			log.Println("status", updated.Status.State)
 
 			if updated.Status.State == ptjv1.PlexTranscodeStateAssigned {
-				assert.Equal(t, updated.Status.Transcoder, "helloworld", "invalid transcoder")
+				assert.Equal(t, "helloworld", updated.Status.Transcoder, "invalid transcoder")
 				controller.Shutdown()
 			}
 		},

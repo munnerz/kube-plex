@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-const myPodName = "helloworld"
+var IdlePods = []string{"helloworld"}
 
 func Run(controller kubeplex.Controller) error {
 	controller.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -27,7 +27,7 @@ func Run(controller kubeplex.Controller) error {
 
 			log.Println("Assigned job to worker.")
 			updated.Status.State = ptjv1.PlexTranscodeStateAssigned
-			updated.Status.Transcoder = "helloworld"
+			updated.Status.Transcoder = IdlePods[0]
 			kubeplex.UpdatePlexTranscodeJob(updated, controller.KubeClient)
 		},
 	})

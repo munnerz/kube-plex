@@ -8,12 +8,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/munnerz/kube-plex/pkg/kube-plex"
+	"github.com/munnerz/kube-plex/pkg/testutils"
 	ptjv1 "github.com/munnerz/kube-plex/pkg/apis/ptj/v1"
 	"github.com/munnerz/kube-plex/pkg/kube-plex/fake"
 )
 
 func TestWorkerJobSuccess(t *testing.T) {
-	ptj := kubeplex.GeneratePlexTranscodeJob([]string{"/bin/touch", "/tmp/test"}, []string{})
+	tmpfile := testutils.RandomPath()
+
+	ptj := kubeplex.GeneratePlexTranscodeJob([]string{"/bin/touch", tmpfile}, []string{})
 	controller := fake.NewFakeController(&ptj)
 
 	controller.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -26,8 +29,8 @@ func TestWorkerJobSuccess(t *testing.T) {
 				return
 			}
 
-			_, err := os.Stat("/tmp/test")
-			assert.Equal(t, err, nil, "/tmp/test should exist!")
+			_, err := os.Stat(tmpfile)
+			assert.Equal(t, nil, err, tmpfile + " should exist!")
 			controller.Shutdown()
 		},
 	})
@@ -74,7 +77,9 @@ func TestWorkerJobFailure(t *testing.T) {
 }
 
 func TestWorkerJobAssignedToOtherWorker(t *testing.T) {
-	ptj := kubeplex.GeneratePlexTranscodeJob([]string{"/bin/touch", "/tmp/mytest"}, []string{})
+	tmpfile := testutils.RandomPath()
+
+	ptj := kubeplex.GeneratePlexTranscodeJob([]string{"/bin/touch", tmpfile}, []string{})
 	controller := fake.NewFakeController(&ptj)
 
 	controller.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -102,4 +107,7 @@ func TestWorkerJobAssignedToOtherWorker(t *testing.T) {
 	kubeplex.UpdatePlexTranscodeJob(new_ptj, controller.KubeClient)
 
 	<-controller.Stop
+
+	_, err := os.Stat(tmpfile)
+	assert.NotEqual(t, nil, err, tmpfile + " should not exist!")
 }
