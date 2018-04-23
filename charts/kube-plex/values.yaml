@@ -14,6 +14,9 @@ kubePlexImage:
 # Override this with the plex claim token from plex.tv/claim
 claimToken: ""
 
+# Set the timezone of the plex server
+timezone: Europe/London
+
 service:
   type: ClusterIP
 
