@@ -57,7 +57,7 @@ spec:
         #     port: 32400
         env:
         - name: TZ
-          value: Europe/London
+          value: "{{ .Values.timezone }}"
         # TODO: move this to a secret?
         - name: PLEX_CLAIM
           value: "{{ .Values.claimToken }}"
