@@ -23,6 +23,7 @@ spec:
     spec:
       serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}{{ .Values.rbac.serviceAccountName | quote }}{{ end }}
       hostname: "{{ template "fullname" . }}"
+{{- if .Values.kubePlex.enabled }}
       initContainers:
       - name: kube-plex-install
         image: "{{ .Values.kubePlexImage.repository }}:{{ .Values.kubePlexImage.tag }}"
@@ -34,10 +35,12 @@ spec:
         volumeMounts:
         - name: shared
           mountPath: /shared
+{{- end }}
       containers:
       - name: plex
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+{{- if .Values.kubePlex.enabled }}
         # We replace the PMS binary with a postStart hook to save having to
         # modify the default image entrypoint.
         lifecycle:
@@ -51,6 +54,7 @@ spec:
                 set -e
                 rm -f '/usr/lib/plexmediaserver/Plex Transcoder'
                 cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'
+{{- end }}
         # readinessProbe:
         #   httpGet:
         #     path: /
@@ -119,11 +123,15 @@ spec:
           claimName: "{{ template "fullname" . }}-config"
 {{- end }}
       - name: transcode
+{{- if .Values.persistence.transcode.enabled }}
         persistentVolumeClaim:
 {{- if .Values.persistence.transcode.claimName }}
           claimName: "{{ .Values.persistence.transcode.claimName }}"
 {{- else }}
           claimName: "{{ template "fullname" . }}-transcode"
+{{- end }}
+{{- else }}
+        emptyDir: {}
 {{- end }}
       - name: shared
         emptyDir: {}

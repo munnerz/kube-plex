@@ -6,10 +6,12 @@ image:
   tag: 1.10.1.4602-f54242b6b
   pullPolicy: IfNotPresent
 
-kubePlexImage:
-  repository: quay.io/munnerz/kube-plex
-  tag: latest
-  pullPolicy: Always
+kubePlex:
+  enabled: true
+  image:
+    repository: quay.io/munnerz/kube-plex
+    tag: latest
+    pullPolicy: Always
 
 # Override this with the plex claim token from plex.tv/claim
 claimToken: ""

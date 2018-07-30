@@ -1,4 +1,4 @@
-{{- if not .Values.persistence.transcode.claimName }}
+{{- if and (not .Values.persistence.transcode.claimName) .Values.persistence.transcode.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
