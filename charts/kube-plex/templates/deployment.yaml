@@ -26,8 +26,8 @@ spec:
 {{- if .Values.kubePlex.enabled }}
       initContainers:
       - name: kube-plex-install
-        image: "{{ .Values.kubePlexImage.repository }}:{{ .Values.kubePlexImage.tag }}"
-        imagePullPolicy: {{ .Values.kubePlexImage.pullPolicy }}
+        image: "{{ .Values.kubePlex.image.repository }}:{{ .Values.kubePlex.image.tag }}"
+        imagePullPolicy: {{ .Values.kubePlex.image.pullPolicy }}
         command:
         - cp
         - /kube-plex
