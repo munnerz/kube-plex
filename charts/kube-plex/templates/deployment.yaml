@@ -50,8 +50,6 @@ spec:
               - bash
               - -c
               - |
-                #!/bin/bash
-                set -e
                 rm -f '/usr/lib/plexmediaserver/Plex Transcoder'
                 cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'
 {{- end }}
