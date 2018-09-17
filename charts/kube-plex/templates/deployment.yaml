@@ -41,17 +41,9 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
 {{- if .Values.kubePlex.enabled }}
-        # We replace the PMS binary with a postStart hook to save having to
-        # modify the default image entrypoint.
-        lifecycle:
-          postStart:
-            exec:
-              command:
-              - bash
-              - -c
-              - |
-                rm -f '/usr/lib/plexmediaserver/Plex Transcoder'
-                cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'
+        # We replace the PMS binary after plex finishes upgrading
+        command: ["/bin/bash"]
+        args: ["-c", "echo \"rm -f '/usr/lib/plexmediaserver/Plex Transcoder' && cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'\" >> /etc/cont-init.d/50-plex-update && /init"]
 {{- end }}
         # readinessProbe:
         #   httpGet:
