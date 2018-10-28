@@ -7,12 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/munnerz/kube-plex/pkg/signals"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-
-	"github.com/munnerz/kube-plex/pkg/signals"
 )
 
 // data pvc name
@@ -107,6 +106,9 @@ func generatePod(cwd string, env []string, args []string) *corev1.Pod {
 			GenerateName: "pms-elastic-transcoder-",
 		},
 		Spec: corev1.PodSpec{
+			NodeSelector: map[string]string{
+				"beta.kubernetes.io/arch": "amd64",
+			},
 			RestartPolicy: corev1.RestartPolicyNever,
 			Containers: []corev1.Container{
 				{
