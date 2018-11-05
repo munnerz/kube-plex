@@ -59,6 +59,13 @@ spec:
         #   httpGet:
         #     path: /
         #     port: 32400
+        ports:
+          - name: pms
+            containerPort: 32400
+          - name: http
+            containerPort: 32400
+          - name: https
+            containerPort: 32443
         env:
         - name: TZ
           value: "{{ .Values.timezone }}"
