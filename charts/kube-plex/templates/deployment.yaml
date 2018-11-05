@@ -95,19 +95,19 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
-          {{- if .Values.persistence.data.subPath }}
-            subPath: {{ .Values.persistence.data.subPath }}
-          {{ end }}
+        {{- if .Values.persistence.data.subPath }}
+          subPath: {{ .Values.persistence.data.subPath }}
+        {{ end }}
         - name: config
           mountPath: /config
-          {{- if .Values.persistence.config.subPath }}
-            subPath: {{ .Values.persistence.config.subPath }}
-          {{ end }}
+        {{- if .Values.persistence.config.subPath }}
+          subPath: {{ .Values.persistence.config.subPath }}
+        {{ end }}
         - name: transcode
           mountPath: /transcode
-          {{- if .Values.persistence.transcode.subPath }}
-            subPath: {{ .Values.persistence.transcode.subPath }}
-          {{ end }}
+        {{- if .Values.persistence.transcode.subPath }}
+          subPath: {{ .Values.persistence.transcode.subPath }}
+        {{ end }}
         - name: shared
           mountPath: /shared
         resources:
