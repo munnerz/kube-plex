@@ -53,22 +53,6 @@ spec:
     - name: https
       port: 443
       targetPort: 32443
-spec:
-  type: {{ .Values.service.type }}
-  ports:
-  - name: http
-    port: 80
-    targetPort: 32400
-  - name: https
-    port: 443
-    targetPort: 32443
-  - name: pms
-    port: 32400
-    targetPort: 32400
-{{- if .Values.service.externalIPs }}
-  externalIPs:
-{{ toYaml .Values.service.externalIPs | indent 4 }}
-{{- end }}
   selector:
     app: {{ template "name" . }}
     release: {{ .Release.Name }}
