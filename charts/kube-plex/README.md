@@ -1,4 +1,4 @@
-# Plex Media Server helm client
+# Plex Media Server helm chart
 
 ## Configuration
 
@@ -43,7 +43,5 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `persistence.config.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.config.storageClass` | Type of persistent volume claim | `-` |
 | `resources`                | CPU/Memory resource requests/limits | `{}` |
-
-Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
 
 Read through the [values.yaml](values.yaml) file. It has several commented out suggested values.
