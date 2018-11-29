@@ -47,8 +47,20 @@ spec:
           - -c
           - |
             #!/bin/bash
+
+            set -e
+
+            # If Plex Transcoder exists then let copy kube-plex now
+            if [ -f '/usr/lib/plexmediaserver/Plex Transcoder' ]; then
+              rm -f '/usr/lib/plexmediaserver/Plex Transcoder'
+              cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'
+            fi
+
+            # either way add the commands to the update script so that after an update it runs again
             echo "set -e" >> /etc/cont-init.d/50-plex-update
-            echo "rm -f '/usr/lib/plexmediaserver/Plex Transcoder' && cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'" >> /etc/cont-init.d/50-plex-update
+            echo "rm -f '/usr/lib/plexmediaserver/Plex Transcoder'" >> /etc/cont-init.d/50-plex-update
+            echo "cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'" >> /etc/cont-init.d/50-plex-update
+
             /init
 {{- end }}
         # readinessProbe:
