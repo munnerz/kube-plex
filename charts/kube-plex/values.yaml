@@ -42,6 +42,9 @@ rbac:
   # account for this deployment
   ## serviceAccountName: ""
 
+nodeSelector:
+  beta.kubernetes.io/arch: amd64
+
 persistence:
   transcode:
     # Optionally specify claimName to manually override the PVC to be used for
@@ -52,6 +55,7 @@ persistence:
     # If not specified and claimName is not specified, the default storage
     # class will be used.
     storageClass: ""
+    # subPath: some-subpath
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 20Gi
@@ -64,6 +68,7 @@ persistence:
     # If not specified and claimName is not specified, the default storage
     # class will be used.
     storageClass: ""
+    # subPath: some-subpath
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 40Gi
@@ -75,6 +80,7 @@ persistence:
     # Optionally specify a storage class to be used for the config directory.
     # If not specified and claimName is not specified, the default storage
     # class will be used.
+    # subPath: some-subpath
     storageClass: ""
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
