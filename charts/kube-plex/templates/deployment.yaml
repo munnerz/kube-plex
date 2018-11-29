@@ -43,7 +43,13 @@ spec:
 {{- if .Values.kubePlex.enabled }}
         # We replace the PMS binary after plex finishes upgrading
         command: ["/bin/bash"]
-        args: ["-c", "echo \"rm -f '/usr/lib/plexmediaserver/Plex Transcoder' && cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'\" >> /etc/cont-init.d/50-plex-update && /init"]
+        args:
+          - -c
+          - |
+            #!/bin/bash
+            echo "set -e" >> /etc/cont-init.d/50-plex-update
+            echo "rm -f '/usr/lib/plexmediaserver/Plex Transcoder' && cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'" >> /etc/cont-init.d/50-plex-update
+            /init
 {{- end }}
         # readinessProbe:
         #   httpGet:
