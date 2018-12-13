@@ -19,6 +19,10 @@ claimToken: ""
 # Set the timezone of the plex server
 timezone: Europe/London
 
+# Set the UID/GID of the plex user (For NFS deployments)
+#plexUser: "1005"
+#plexGroup: "8675309"
+
 service:
   type: ClusterIP
   port: 32400
@@ -65,6 +69,8 @@ nodeSelector:
 
 persistence:
   transcode:
+    # Enable a persistent transcode directory
+    ## enabled: true
     # Optionally specify claimName to manually override the PVC to be used for
     # the transcode directory. If claimName is specified, storageClass and size
     # are ignored.
