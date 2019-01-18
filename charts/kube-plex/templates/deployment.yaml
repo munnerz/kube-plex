@@ -55,10 +55,14 @@ spec:
                 rm -f '/usr/lib/plexmediaserver/Plex Transcoder'
                 cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'
 {{- end }}
-        # readinessProbe:
-        #   httpGet:
-        #     path: /
-        #     port: 32400
+        readinessProbe:
+          httpGet:
+            path: /identity
+            port: 32400
+        livenessProbe:
+          httpGet:
+            path: /identity
+            port: 32400
         ports:
           - name: pms
             containerPort: 32400
