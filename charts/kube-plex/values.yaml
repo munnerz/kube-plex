@@ -103,6 +103,7 @@ persistence:
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 20Gi
+    accessMode: ReadWriteOnce
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
