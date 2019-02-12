@@ -110,21 +110,24 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
-        {{- if .Values.persistence.data.subPath }}
+{{- if .Values.persistence.data.subPath }}
           subPath: {{ .Values.persistence.data.subPath }}
-        {{ end }}
+{{ end }}
         - name: config
           mountPath: /config
-        {{- if .Values.persistence.config.subPath }}
+{{- if .Values.persistence.config.subPath }}
           subPath: {{ .Values.persistence.config.subPath }}
-        {{ end }}
+{{ end }}
         - name: transcode
           mountPath: /transcode
-        {{- if .Values.persistence.transcode.subPath }}
+{{- if .Values.persistence.transcode.subPath }}
           subPath: {{ .Values.persistence.transcode.subPath }}
-        {{ end }}
+{{ end }}
         - name: shared
           mountPath: /shared
+{{- if .Values.persistence.customVolumeMounts }}
+{{ toYaml .Values.persistence.customVolumeMounts | indent 8 }}
+{{ end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
     {{- if .Values.nodeSelector }}
@@ -159,3 +162,6 @@ spec:
 {{- end }}
       - name: shared
         emptyDir: {}
+{{- if .Values.persistence.customVolumes }}
+{{ toYaml .Values.persistence.customVolumes | indent 6 }}
+{{ end }}

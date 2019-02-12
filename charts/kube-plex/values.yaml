@@ -73,7 +73,9 @@ persistence:
     # If not specified and claimName is not specified, the default storage
     # class will be used.
     storageClass: ""
-    # subPath: some-subpath
+    # Optionally specify a sub path to mount a specific folder from the volume
+    # https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath
+    ## subPath: "some-subpath"
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 20Gi
@@ -86,7 +88,9 @@ persistence:
     # If not specified and claimName is not specified, the default storage
     # class will be used.
     storageClass: ""
-    # subPath: some-subpath
+    # Optionally specify a sub path to mount a specific folder from the volume
+    # https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath
+    ## subPath: "some-subpath"
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 40Gi
@@ -98,11 +102,27 @@ persistence:
     # Optionally specify a storage class to be used for the config directory.
     # If not specified and claimName is not specified, the default storage
     # class will be used.
-    # subPath: some-subpath
     storageClass: ""
+    # Optionally specify a sub path to mount a specific folder from the volume
+    # https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath
+    ## subPath: "some-subpath"
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 20Gi
+  # Additionally to the built-in volume mount you can specify custom volume mounts here to mount other folders
+  #customVolumeMounts:
+    #- name: data
+    #  mountPath: "/data1"
+    #  subPath: "optional/subpath"
+    #- name: data2
+    #  mountPath: "/data2"
+  # Additionally to the built-in volumes you can specify custom volumes here
+  #customVolumes:
+    #- name: data2
+    ##  Specify either a claim or emptyDir or anything else supported by kubernetes
+    #  persistentVolumeClaim:
+    #    claimName: "data2 claim"
+    #  emptyDir: {}
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
