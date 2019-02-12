@@ -2,7 +2,7 @@ apiVersion: v1
 appVersion: 1.10.1.4602-f54242b6b
 description: Plex Media Server
 name: kube-plex
-version: 0.2.0
+version: 0.2.3
 keywords:
   - plex
 home: https://plex.tv/

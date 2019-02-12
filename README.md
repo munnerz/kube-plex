@@ -34,7 +34,7 @@ This will be used to bind your new PMS instance to your own user account
 automatically.
 
 2) Deploy the Helm chart included in this repository using the claim token
-obtained in step 1. If you have pre-existing peristent volume claims for your
+obtained in step 1. If you have pre-existing persistent volume claims for your
 media, you can specify its name with `--set persistence.data.claimName`. If not
 specified, a persistent volume will be automatically provisioned for you.
 
