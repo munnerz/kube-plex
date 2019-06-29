@@ -107,6 +107,13 @@ spec:
 {{- else }}
           value: "{{ template "fullname" . }}-config"
 {{- end }}
+{{- if and (.Values.service.loadBalancerIP) (eq .Values.service.type "LoadBalancer") }}
+        - name: ADVERTISE_IP
+          value: "http://{{ .Values.service.loadBalancerIP }}:32400"
+{{- end }}
+{{ if .Values.env }}
+{{ toYaml .Values.env | indent 8 }}
+{{- end }}
         volumeMounts:
         - name: data
           mountPath: /data

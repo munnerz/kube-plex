@@ -116,3 +116,9 @@ resources: {}
   # requests:
   #  cpu: 100m
   #  memory: 128Mi
+env:
+  # Optional
+  ## Specify additional environmental variables for kube-plex and/or plex
+  ## docker images
+  # - name: ADVERTISE_IP
+  #   value: "http://1.1.1.1:32400/"
