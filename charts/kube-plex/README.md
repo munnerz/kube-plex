@@ -43,5 +43,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `persistence.config.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.config.storageClass` | Type of persistent volume claim | `-` |
 | `resources`                | CPU/Memory resource requests/limits | `{}` |
+| `podAnnotations`           | Key-value pairs to add as pod annotations  | `{}` |
+
 
 Read through the [values.yaml](values.yaml) file. It has several commented out suggested values.
