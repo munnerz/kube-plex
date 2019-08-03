@@ -118,3 +118,10 @@ resources: {}
   #  memory: 128Mi
 
 podAnnotations: {}
+
+proxy: 
+  # This allows to set a proxy environment variable, which PMS uses to fetch the token and assets like movie cover
+  enable: false
+  # http: "http://proxy:8080"
+  # https: "https://proxy:8080"
+  # noproxy: "localhost,127.0.0.1,10.96.0.0/12,10.244.0.0/12"
