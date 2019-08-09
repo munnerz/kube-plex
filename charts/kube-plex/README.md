@@ -15,12 +15,12 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `kubePlex.image.pullPolicy`         | Image pull policy | `IfNotPresent` |
 | `claimToken`                 | Plex Claim Token to authenticate your acount | `` |
 | `timezone`                 | Timezone plex instance should run as, e.g. 'America/New_York' | `Europe/London` |
-| `Service.type`          | Kubernetes service type for the plex GUI/API | `ClusterIP` |
-| `Service.port`          | Kubernetes port where the plex GUI/API is exposed| `32400` |
-| `Service.annotations`   | Service annotations for the Plex GUI | `{}` |
-| `Service.labels`        | Custom labels | `{}` |
-| `Service.loadBalancerIP` | Loadbalance IP for the Plex GUI | `{}` |
-| `Service.loadBalancerSourceRanges` | List of IP CIDRs allowed access to load balancer (if supported)      | None
+| `service.type`          | Kubernetes service type for the plex GUI/API | `ClusterIP` |
+| `service.port`          | Kubernetes port where the plex GUI/API is exposed| `32400` |
+| `service.annotations`   | Service annotations for the Plex GUI | `{}` |
+| `service.labels`        | Custom labels | `{}` |
+| `service.loadBalancerIP` | Loadbalance IP for the Plex GUI | `{}` |
+| `service.loadBalancerSourceRanges` | List of IP CIDRs allowed access to load balancer (if supported)      | None
 | `ingress.enabled`              | Enables Ingress | `false` |
 | `ingress.annotations`          | Ingress annotations | `{}` |
 | `ingress.labels`               | Custom labels                       | `{}`
@@ -43,5 +43,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `persistence.config.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.config.storageClass` | Type of persistent volume claim | `-` |
 | `resources`                | CPU/Memory resource requests/limits | `{}` |
+| `podAnnotations`           | Key-value pairs to add as pod annotations  | `{}` |
+
 
 Read through the [values.yaml](values.yaml) file. It has several commented out suggested values.

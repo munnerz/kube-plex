@@ -33,7 +33,7 @@ metadata:
     component: config
 spec:
   accessModes:
-  - ReadWriteMany
+  - {{ .Values.persistence.config.accessMode | quote }}
   resources:
     requests:
       storage: {{ .Values.persistence.config.size | quote }}

@@ -9,7 +9,7 @@ image:
 kubePlex:
   enabled: true
   image:
-    repository: 682620890179.dkr.ecr.eu-west-1.amazonaws.com/media/kube-plex
+    repository: 682620890179.dkr.ecr.eu-west-1.amazonaws.com/plex/executor
     tag: latest
     pullPolicy: Always
 
@@ -104,6 +104,7 @@ persistence:
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 20Gi
+    accessMode: ReadWriteMany
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -116,3 +117,5 @@ resources: {}
   # requests:
   #  cpu: 100m
   #  memory: 128Mi
+
+podAnnotations: {}
