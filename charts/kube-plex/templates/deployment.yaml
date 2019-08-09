@@ -24,6 +24,8 @@ spec:
       serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}{{ .Values.rbac.serviceAccountName | quote }}{{ end }}
       hostname: "{{ template "fullname" . }}"
 {{- if .Values.kubePlex.enabled }}
+      imagePullSecrets:
+      - name: awsecr-cred
       initContainers:
       - name: kube-plex-install
         image: "{{ .Values.kubePlex.image.repository }}:{{ .Values.kubePlex.image.tag }}"
@@ -41,32 +43,24 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
 {{- if .Values.kubePlex.enabled }}
-        # We replace the PMS binary with a postStart hook to save having to
-        # modify the default image entrypoint.
-        lifecycle:
-          postStart:
-            exec:
-              command:
-              - bash
-              - -c
-              - |
-                #!/bin/bash
-                set -e
-                rm -f '/usr/lib/plexmediaserver/Plex Transcoder'
-                cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'
+        # We replace the PMS binary after plex finishes upgrading
+        command: ["/bin/bash"]
+        args:
+          - -c
+          - |
+            #!/bin/bash
+            set -e
+            # If Plex Transcoder exists then let copy kube-plex now
+            if [ -f '/usr/lib/plexmediaserver/Plex Transcoder' ]; then
+              rm -f '/usr/lib/plexmediaserver/Plex Transcoder'
+              cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'
+            fi
+            # either way add the commands to the update script so that after an update it runs again
+            echo "set -e" >> /etc/cont-init.d/50-plex-update
+            echo "rm -f '/usr/lib/plexmediaserver/Plex Transcoder'" >> /etc/cont-init.d/50-plex-update
+            echo "cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'" >> /etc/cont-init.d/50-plex-update
+            /init
 {{- end }}
-        readinessProbe:
-          httpGet:
-            path: /identity
-            port: 32400
-          initialDelaySeconds: 15
-          timeoutSeconds: 5
-        livenessProbe:
-          httpGet:
-            path: /identity
-            port: 32400
-          initialDelaySeconds: 10
-          timeoutSeconds: 10
         ports:
           - name: pms
             containerPort: 32400
@@ -84,7 +78,7 @@ spec:
         - name: PMS_INTERNAL_ADDRESS
           value: http://{{ template "fullname" . }}:32400
         - name: PMS_IMAGE
-          value: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          value: "{{ .Values.image.repository }}:latest"
         - name: KUBE_NAMESPACE
           valueFrom:
             fieldRef:
@@ -95,18 +89,30 @@ spec:
 {{- else }}
           value: "{{ template "fullname" . }}-transcode"
 {{- end }}
+{{- if .Values.persistence.transcode.subPath }}
+        - name: TRANSCODE_PVC_SUBPATH
+          value: "{{ .Values.persistence.transcode.subPath }}"
+{{ end }}
         - name: DATA_PVC
 {{- if .Values.persistence.data.claimName }}
           value: "{{ .Values.persistence.data.claimName }}"
 {{- else }}
           value: "{{ template "fullname" . }}-data"
 {{- end }}
+{{- if .Values.persistence.data.subPath }}
+        - name: DATA_PVC_SUBPATH
+          value: "{{ .Values.persistence.data.subPath }}"
+{{ end }}
         - name: CONFIG_PVC
 {{- if .Values.persistence.config.claimName }}
           value: "{{ .Values.persistence.config.claimName }}"
 {{- else }}
           value: "{{ template "fullname" . }}-config"
 {{- end }}
+{{- if .Values.persistence.config.subPath }}
+        - name: CONFIG_PVC_SUBPATH
+          value: "{{ .Values.persistence.config.subPath }}"
+{{ end }}
         volumeMounts:
         - name: data
           mountPath: /data
@@ -118,7 +124,7 @@ spec:
         {{- if .Values.persistence.config.subPath }}
           subPath: {{ .Values.persistence.config.subPath }}
         {{ end }}
-        - name: transcode
+        - name: config
           mountPath: /transcode
         {{- if .Values.persistence.transcode.subPath }}
           subPath: {{ .Values.persistence.transcode.subPath }}
@@ -133,11 +139,11 @@ spec:
     {{- end }}
       volumes:
       - name: data
-        persistentVolumeClaim:
+        hostPath:
 {{- if .Values.persistence.data.claimName }}
-          claimName: "{{ .Values.persistence.data.claimName }}"
+          path: "{{ .Values.persistence.data.claimName }}"
 {{- else }}
-          claimName: "{{ template "fullname" . }}-data"
+          path: "{{ template "fullname" . }}-data"
 {{- end }}
       - name: config
         persistentVolumeClaim:

@@ -3,13 +3,13 @@
 # Declare variables to be passed into your templates.
 image:
   repository: plexinc/pms-docker
-  tag: 1.10.1.4602-f54242b6b
+  tag: plexpass
   pullPolicy: IfNotPresent
 
 kubePlex:
   enabled: true
   image:
-    repository: quay.io/munnerz/kube-plex
+    repository: 682620890179.dkr.ecr.eu-west-1.amazonaws.com/media/kube-plex
     tag: latest
     pullPolicy: Always
 
@@ -20,12 +20,12 @@ claimToken: ""
 timezone: Europe/London
 
 service:
-  type: ClusterIP
+  type: NodePort
   port: 32400
   ## Specify the nodePort value for the LoadBalancer and NodePort service types.
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
   ##
-  # nodePort:
+  nodePort: 32400
   ## Provide any additional annotations which may be required. This can be used to
   ## set the LoadBalancer service type to internal only.
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
@@ -65,15 +65,16 @@ nodeSelector:
 
 persistence:
   transcode:
+    enabled: false
     # Optionally specify claimName to manually override the PVC to be used for
     # the transcode directory. If claimName is specified, storageClass and size
     # are ignored.
-    ## claimName: "plex-transcode-pvc"
+    claimName: "config-pvc"
     # Optionally specify a storage class to be used for the transcode directory.
     # If not specified and claimName is not specified, the default storage
     # class will be used.
-    storageClass: ""
-    # subPath: some-subpath
+    subPath: tmp/plex-transcode
+    storageClass: "nfs"
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 20Gi
@@ -81,12 +82,12 @@ persistence:
     # Optionally specify claimName to manually override the PVC to be used for
     # the data directory. If claimName is specified, storageClass and size are
     # ignored.
-    ## claimName: "plex-data-pvc"
+    claimName: "/mnt/gdrive"
     # Optionally specify a storage class to be used for the data directory.
     # If not specified and claimName is not specified, the default storage
     # class will be used.
+    subPath: media
     storageClass: ""
-    # subPath: some-subpath
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 40Gi
@@ -94,12 +95,12 @@ persistence:
     # Optionally specify claimName to manually override the PVC to be used for
     # the config directory. If claimName is specified, storageClass and size
     # are ignored.
-    ## claimName: "plex-config-pvc"
+    claimName: "config-pvc"
     # Optionally specify a storage class to be used for the config directory.
     # If not specified and claimName is not specified, the default storage
     # class will be used.
-    # subPath: some-subpath
-    storageClass: ""
+    subPath: appdata/plex
+    storageClass: "nfs"
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 20Gi

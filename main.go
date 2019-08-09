@@ -1,47 +1,48 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/munnerz/kube-plex/pkg/signals"
+	plexv1alpha1 "gitlab.yvatechengineering.com/server/plex-operator/pkg/apis/plex/v1alpha1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/tools/cache"
 )
 
 // data pvc name
 var dataPVC = os.Getenv("DATA_PVC")
+var dataPVCSubpath = os.Getenv("DATA_PVC_SUBPATH")
 
 // config pvc name
 var configPVC = os.Getenv("CONFIG_PVC")
+var configPVCSubpath = os.Getenv("CONFIG_PVC_SUBPATH")
 
 // transcode pvc name
 var transcodePVC = os.Getenv("TRANSCODE_PVC")
+var transcodePVCSubpath = os.Getenv("TRANSCODE_PVC_SUBPATH")
 
 // pms namespace
 var namespace = os.Getenv("KUBE_NAMESPACE")
+var podName = os.Getenv("POD_NAME")
 
 // image for the plexmediaserver container containing the transcoder. This
 // should be set to the same as the 'master' pms server
 var pmsImage = os.Getenv("PMS_IMAGE")
 var pmsInternalAddress = os.Getenv("PMS_INTERNAL_ADDRESS")
 
-func main() {
-	env := os.Environ()
-	args := os.Args
+var instance = os.Getenv("KUBEPLEX_ENV")
 
-	rewriteEnv(env)
-	rewriteArgs(args)
-	cwd, err := os.Getwd()
+func main() {
 	if err != nil {
 		log.Fatalf("Error getting working directory: %s", err)
 	}
-	pod := generatePod(cwd, env, args)
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
 	if err != nil {
@@ -53,33 +54,63 @@ func main() {
 		log.Fatalf("Error building kubernetes clientset: %s", err)
 	}
 
-	pod, err = kubeClient.CoreV1().Pods(namespace).Create(pod)
+	switch instance {
+	case "executor":
+		log.Println("Running executor.")
+		err = runExecutor(kubeClient)
+	case "worker":
+		log.Println("Running worker.")
+		err = runWorker(kubeClient)
+	}
+
+}
+
+func runExecutor(kubeClient *kubernetes.Clientset) {
+	env := os.Environ()
+	args := os.Args
+
+	rewriteEnv(env)
+	rewriteArgs(args)
+	cwd, err := os.Getwd()
+
+	ptj := generatePlexTranscodeJob(cwd, env, args)
+	err = kubeClient.Create(context.TODO(), ptj)
 	if err != nil {
-		log.Fatalf("Error creating pod: %s", err)
+		log.Error(err, "Failed to create new PlexTranscodeJob", "PlexTranscodeJob.Namespace", ptj.Namespace, "PlexTranscodeJob.Name", ptj.Name)
 	}
+	// TODO watch and delete when goes to completed state
+}
 
-	stopCh := signals.SetupSignalHandler()
-	waitFn := func() <-chan error {
-		stopCh := make(chan error)
-		go func() {
-			stopCh <- waitForPodCompletion(kubeClient, pod)
-		}()
-		return stopCh
-	}
+func runWorker(kubeClient *kubernetes.Clientset) {
+	watchlist := cache.NewListWatchFromClient(
+		kubeClient.CoreV1().RESTClient(),
+		"plextranscodejobs",
+		corev1.NamespaceAll,
+		fields.Everything(),
+	)
+	_, controller := cache.NewInformer(
+		watchlist,
+		&plexv1alpha1.PlexTranscodeJob{},
+		0, //Duration is int64
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				log.Println("PlexTranscodeJob added: %s \n", obj)
+			},
+			DeleteFunc: func(obj interface{}) {
+				log.Println("PlexTranscodeJob deleted: %s \n", obj)
+			},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				log.Println("PlexTranscodeJob changed \n")
 
-	select {
-	case err := <-waitFn():
-		if err != nil {
-			log.Printf("Error waiting for pod to complete: %s", err)
-		}
-	case <-stopCh:
-		log.Printf("Exit requested.")
-	}
-
-	log.Printf("Cleaning up pod...")
-	err = kubeClient.CoreV1().Pods(namespace).Delete(pod.Name, nil)
-	if err != nil {
-		log.Fatalf("Error cleaning up pod: %s", err)
+				// updated.Status.State, updated.Status.Error = runPlexTranscodeJob(updated)
+			},
+		},
+	)
+	stop := make(chan struct{})
+	defer close(stop)
+	go controller.Run(stop)
+	for {
+		time.Sleep(time.Second)
 	}
 }
 
@@ -99,101 +130,55 @@ func rewriteArgs(in []string) {
 	}
 }
 
-func generatePod(cwd string, env []string, args []string) *corev1.Pod {
-	envVars := toCoreV1EnvVar(env)
-	return &corev1.Pod{
+func runPlexTranscodeJob(ptj *plexv1alpha1.PlexTranscodeJob) (plexv1alpha1.PlexTranscodeJobState, string) {
+	args := ptj.Spec.Args[1:len(ptj.Spec.Args)]
+	cmd := ptj.Spec.Args[0]
+
+	command := exec.Command(cmd, args...)
+
+	command.Dir = ptj.Spec.Cwd
+
+	stderr, err := command.StderrPipe()
+	if err != nil {
+		return plexv1alpha1.PlexTranscodeStateFailed, err.Error()
+	}
+
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		return plexv1alpha1.PlexTranscodeStateFailed, err.Error()
+	}
+
+	command.Env = ptj.Spec.Env
+
+	err = command.Start()
+	if err != nil {
+		return plexv1alpha1.PlexTranscodeStateFailed, err.Error()
+	}
+
+	go io.Copy(os.Stderr, stderr)
+	go io.Copy(os.Stdout, stdout)
+
+	err = command.Wait()
+	if err != nil {
+		return plexv1alpha1.PlexTranscodeStateFailed, err.Error()
+	}
+
+	return plexv1alpha1.PlexTranscodeStateCompleted, ""
+}
+
+func generatePlexTranscodeJob(cwd string, env []string, args []string) *plexv1alpha1.PlexTranscodeJob {
+	return &plexv1alpha1.PlexTranscodeJob{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "pms-elastic-transcoder-",
+			GenerateName: "plex-transcode-job-",
+			Namespace: namespace,
 		},
-		Spec: corev1.PodSpec{
-			NodeSelector: map[string]string{
-				"beta.kubernetes.io/arch": "amd64",
-			},
-			RestartPolicy: corev1.RestartPolicyNever,
-			Containers: []corev1.Container{
-				{
-					Name:       "plex",
-					Command:    args,
-					Image:      pmsImage,
-					Env:        envVars,
-					WorkingDir: cwd,
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "data",
-							MountPath: "/data",
-							ReadOnly:  true,
-						},
-						{
-							Name:      "config",
-							MountPath: "/config",
-							ReadOnly:  true,
-						},
-						{
-							Name:      "transcode",
-							MountPath: "/transcode",
-						},
-					},
-				},
-			},
-			Volumes: []corev1.Volume{
-				{
-					Name: "data",
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: dataPVC,
-						},
-					},
-				},
-				{
-					Name: "config",
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: configPVC,
-						},
-					},
-				},
-				{
-					Name: "transcode",
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: transcodePVC,
-						},
-					},
-				},
-			},
+		Spec: plexv1alpha1.PlexTranscodeJobSpec{
+			Args: args,
+			Env: env,
+			Cwd: cwd,
 		},
-	}
-}
-
-func toCoreV1EnvVar(in []string) []corev1.EnvVar {
-	out := make([]corev1.EnvVar, len(in))
-	for i, v := range in {
-		splitvar := strings.SplitN(v, "=", 2)
-		out[i] = corev1.EnvVar{
-			Name:  splitvar[0],
-			Value: splitvar[1],
-		}
-	}
-	return out
-}
-
-func waitForPodCompletion(cl kubernetes.Interface, pod *corev1.Pod) error {
-	for {
-		pod, err := cl.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		switch pod.Status.Phase {
-		case corev1.PodPending:
-		case corev1.PodRunning:
-		case corev1.PodUnknown:
-			log.Printf("Warning: pod %q is in an unknown state", pod.Name)
-		case corev1.PodFailed:
-			return fmt.Errorf("pod %q failed", pod.Name)
-		case corev1.PodSucceeded:
-			return nil
-		}
-		time.Sleep(1 * time.Second)
+		Status: plexv1alpha1.PlexTranscodeJobStatus{
+			State: plexv1alpha1.PlexTranscodeStateCreated,
+		},
 	}
 }
