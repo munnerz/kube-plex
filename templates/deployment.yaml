@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}
+  labels:
+    app: {{ template "name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    component: "executor"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ template "name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "name" . }}
+        release: {{ .Release.Name }}
+      {{- if .Values.podAnnotations }}
+      annotations:
+        {{- range $key, $value := .Values.podAnnotations }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}{{ .Values.rbac.serviceAccountName | quote }}{{ end }}
+      hostname: "{{ template "fullname" . }}"
+{{- if .Values.kubePlex.enabled }}
+      initContainers:
+      - name: kube-plex-install
+        image: "{{ .Values.operator.image.repository }}:{{ .Values.operator.image.tag }}"
+        imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
+        command:
+        - cp
+        - /plex-operator
+        - /shared/plex-operator
+        volumeMounts:
+        - name: shared
+          mountPath: /shared
+{{- end }}
+      containers:
+      - name: plex
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+{{- if .Values.operator.enabled }}
+        # We replace the PMS binary after plex finishes upgrading
+        command: ["/bin/bash"]
+        args:
+          - -c
+          - |
+            #!/bin/bash
+            set -e
+            # If Plex Transcoder exists then let copy plex-executor now
+            if [ -f '/usr/lib/plexmediaserver/Plex Transcoder' ]; then
+              rm -f '/usr/lib/plexmediaserver/Plex Transcoder'
+              cp /shared/plex-operator '/usr/lib/plexmediaserver/Plex Transcoder'
+            fi
+            # either way add the commands to the update script so that after an update it runs again
+            echo "set -e" >> /etc/cont-init.d/80-plex-operator-install
+            echo "rm -f '/usr/lib/plexmediaserver/Plex Transcoder'" >> /etc/cont-init.d/80-plex-operator-install
+            echo "cp /shared/plex-operator '/usr/lib/plexmediaserver/Plex Transcoder'" >> /etc/cont-init.d/80-plex-operator-install
+            /init
+{{- end }}
+        readinessProbe:
+          httpGet:
+            path: /identity
+            port: 32400
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /identity
+            port: 32400
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+        ports:
+          - name: pms
+            containerPort: 32400
+          - name: http
+            containerPort: 32400
+          - name: https
+            containerPort: 32443
+        env:
+        - name: TZ
+          value: "{{ .Values.timezone }}"
+        # TODO: move this to a secret?
+        - name: PLEX_CLAIM
+          value: "{{ .Values.claimToken }}"
+        # kube-plex env vars
+        - name: PMS_INTERNAL_ADDRESS
+          value: http://{{ template "fullname" . }}:32400
+        - name: PMS_IMAGE
+          value: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        {{- if .Values.persistence.data.subPath }}
+          subPath: {{ .Values.persistence.data.subPath }}
+        {{ end }}
+        - name: config
+          mountPath: /config
+        {{- if .Values.persistence.config.subPath }}
+          subPath: {{ .Values.persistence.config.subPath }}
+        {{ end }}
+        - name: config
+          mountPath: /transcode
+        {{- if .Values.persistence.transcode.subPath }}
+          subPath: {{ .Values.persistence.transcode.subPath }}
+        {{ end }}
+        - name: shared
+          mountPath: /shared
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+    {{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+    {{- end }}
+      volumes:
+      - name: data
+        hostPath:
+{{- if .Values.persistence.data.claimName }}
+          path: "{{ .Values.persistence.data.claimName }}"
+{{- else }}
+          path: "{{ template "fullname" . }}-data"
+{{- end }}
+      - name: config
+        hostPath:
+{{- if .Values.persistence.config.claimName }}
+          path: "{{ .Values.persistence.config.claimName }}"
+{{- else }}
+          path: "{{ template "fullname" . }}-config"
+{{- end }}
+      - name: transcode
+{{- if .Values.persistence.transcode.enabled }}
+        persistentVolumeClaim:
+{{- if .Values.persistence.transcode.claimName }}
+          claimName: "{{ .Values.persistence.transcode.claimName }}"
+{{- else }}
+          claimName: "{{ template "fullname" . }}-transcode"
+{{- end }}
+{{- else }}
+        emptyDir: {}
+{{- end }}
+      - name: shared
+        emptyDir: {}

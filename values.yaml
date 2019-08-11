@@ -1,0 +1,121 @@
+# Default values for kube-plex.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+image:
+  repository: linuxserver/plex
+  tag: plexpass
+  pullPolicy: IfNotPresent
+
+kubePlex:
+  enabled: true
+  image:
+    repository: mcadm/plex-operator
+    tag: v0.0.1
+    pullPolicy: Always
+
+# Override this with the plex claim token from plex.tv/claim
+claimToken: ""
+
+# Set the timezone of the plex server
+timezone: Europe/London
+
+service:
+  type: NodePort
+  port: 32400
+  ## Specify the nodePort value for the LoadBalancer and NodePort service types.
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+  ##
+  nodePort: 32401
+  ## Provide any additional annotations which may be required. This can be used to
+  ## set the LoadBalancer service type to internal only.
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+  ##
+  annotations: {}
+  labels: {}
+  ## Use loadBalancerIP to request a specific static IP,
+  ## otherwise leave blank
+  ##
+  loadBalancerIP:
+  # loadBalancerSourceRanges: []
+  ## Set the externalTrafficPolicy in the Service to either Cluster or Local
+  # externalTrafficPolicy: Cluster
+
+ingress:
+  enabled: false
+  # Used to create an Ingress record.
+  hosts:
+    - chart-example.local
+  annotations:
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  tls:
+    # Secrets must be manually created in the namespace.
+    # - secretName: chart-example-tls
+    #   hosts:
+    #     - chart-example.local
+
+rbac:
+  create: true
+  # Specify create: false and serviceAccountName to manually manage the service
+  # account for this deployment
+  ## serviceAccountName: ""
+
+nodeSelector:
+  beta.kubernetes.io/arch: amd64
+
+persistence:
+  transcode:
+    enabled: false
+    # Optionally specify claimName to manually override the PVC to be used for
+    # the transcode directory. If claimName is specified, storageClass and size
+    # are ignored.
+    claimName: "config-pvc"
+    # Optionally specify a storage class to be used for the transcode directory.
+    # If not specified and claimName is not specified, the default storage
+    # class will be used.
+    subPath: tmp/plex-transcode
+    storageClass: "nfs"
+    # The requested size of the volume to be used when creating a
+    # PersistentVolumeClaim.
+    size: 20Gi
+  data:
+    # Optionally specify claimName to manually override the PVC to be used for
+    # the data directory. If claimName is specified, storageClass and size are
+    # ignored.
+    claimName: "/mnt/gdrive"
+    # Optionally specify a storage class to be used for the data directory.
+    # If not specified and claimName is not specified, the default storage
+    # class will be used.
+    subPath: media
+    storageClass: ""
+    # The requested size of the volume to be used when creating a
+    # PersistentVolumeClaim.
+    size: 40Gi
+  config:
+    # Optionally specify claimName to manually override the PVC to be used for
+    # the config directory. If claimName is specified, storageClass and size
+    # are ignored.
+    claimName: "/mnt/plex-lab"
+    # Optionally specify a storage class to be used for the config directory.
+    # If not specified and claimName is not specified, the default storage
+    # class will be used.
+    subPath:
+    storageClass: "nfs"
+    # The requested size of the volume to be used when creating a
+    # PersistentVolumeClaim.
+    size: 20Gi
+    accessMode: ReadWriteMany
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
+
+podAnnotations: {}
