@@ -30,7 +30,7 @@ spec:
     spec:
       serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}{{ .Values.rbac.serviceAccountName | quote }}{{ end }}
       hostname: "{{ template "fullname" . }}"
-{{- if .Values.kubePlex.enabled }}
+{{- if .Values.operator.enabled }}
       initContainers:
       - name: kube-plex-install
         image: "{{ .Values.operator.image.repository }}:{{ .Values.operator.image.tag }}"
@@ -61,6 +61,7 @@ spec:
               cp /shared/plex-operator '/usr/lib/plexmediaserver/Plex Transcoder'
             fi
             # either way add the commands to the update script so that after an update it runs again
+            echo "#!/usr/bin/with-contenv bash" >> /etc/cont-init.d/80-plex-operator-install
             echo "set -e" >> /etc/cont-init.d/80-plex-operator-install
             echo "rm -f '/usr/lib/plexmediaserver/Plex Transcoder'" >> /etc/cont-init.d/80-plex-operator-install
             echo "cp /shared/plex-operator '/usr/lib/plexmediaserver/Plex Transcoder'" >> /etc/cont-init.d/80-plex-operator-install
@@ -70,13 +71,13 @@ spec:
           httpGet:
             path: /identity
             port: 32400
-          initialDelaySeconds: 15
+          initialDelaySeconds: 5
           timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /identity
             port: 32400
-          initialDelaySeconds: 10
+          initialDelaySeconds: 5
           timeoutSeconds: 10
         ports:
           - name: pms
@@ -96,10 +97,18 @@ spec:
           value: http://{{ template "fullname" . }}:32400
         - name: PMS_IMAGE
           value: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+{{- if .Values.operator.enabled }}
+        - name: PLEX_OPERATOR_COMPONENT
+          value: executor
         - name: WATCH_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+{{- end }}
         volumeMounts:
         - name: data
           mountPath: /data
@@ -152,3 +161,46 @@ spec:
 {{- end }}
       - name: shared
         emptyDir: {}
+---
+{{- if .Values.operator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}-operator
+  labels:
+    app: {{ template "name" . }}-operator
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    component: "operator"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ template "name" . }}-operator
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "name" . }}-operator
+        release: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}{{ .Values.rbac.serviceAccountName | quote }}{{ end }}
+      containers:
+        - name: plex-operator
+          image: "{{ .Values.operator.image.repository }}:{{ .Values.operator.image.tag }}"
+          imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
+          env:
+            - name: PLEX_OPERATOR_COMPONENT
+              value: operator
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: plex-operator
+{{- end }}

@@ -3,10 +3,10 @@
 # Declare variables to be passed into your templates.
 image:
   repository: linuxserver/plex
-  tag: plexpass
+  tag: latest
   pullPolicy: IfNotPresent
 
-kubePlex:
+operator:
   enabled: true
   image:
     repository: mcadm/plex-operator

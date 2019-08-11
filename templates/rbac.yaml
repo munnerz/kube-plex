@@ -1,5 +1,5 @@
 {{- if .Values.rbac.create -}}
-{{- if .Values.kubePlex.enabled }}
+{{- if .Values.operator.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -18,6 +18,12 @@ rules:
   - pods/exec
   - pods/portforward
   - pods/proxy
+  - services
+  - endpoints
+  - persistentvolumeclaims
+  - events
+  - configmaps
+  - secrets
   verbs:
   - create
   - delete
