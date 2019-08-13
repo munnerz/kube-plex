@@ -69,12 +69,12 @@ persistence:
     # Optionally specify claimName to manually override the PVC to be used for
     # the transcode directory. If claimName is specified, storageClass and size
     # are ignored.
-    claimName: "config-pvc"
+    ## claimName: "plex-transcode-pvc"
     # Optionally specify a storage class to be used for the transcode directory.
     # If not specified and claimName is not specified, the default storage
     # class will be used.
-    subPath: tmp/plex-transcode
-    storageClass: "nfs"
+    storageClass: ""
+    # subPath: some-subpath
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 20Gi
@@ -82,12 +82,12 @@ persistence:
     # Optionally specify claimName to manually override the PVC to be used for
     # the data directory. If claimName is specified, storageClass and size are
     # ignored.
-    claimName: "/mnt/gdrive"
+    ## claimName: "plex-data-pvc"
     # Optionally specify a storage class to be used for the data directory.
     # If not specified and claimName is not specified, the default storage
     # class will be used.
-    subPath: media
     storageClass: ""
+    # subPath: some-subpath
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 40Gi
@@ -95,12 +95,12 @@ persistence:
     # Optionally specify claimName to manually override the PVC to be used for
     # the config directory. If claimName is specified, storageClass and size
     # are ignored.
-    claimName: "/mnt/plex-lab"
+    ## claimName: "plex-config-pvc"
     # Optionally specify a storage class to be used for the config directory.
     # If not specified and claimName is not specified, the default storage
     # class will be used.
-    subPath:
-    storageClass: "nfs"
+    # subPath: some-subpath
+    storageClass: ""
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 20Gi

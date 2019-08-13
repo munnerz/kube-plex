@@ -136,18 +136,18 @@ spec:
     {{- end }}
       volumes:
       - name: data
-        hostPath:
+        persistentVolumeClaim:
 {{- if .Values.persistence.data.claimName }}
-          path: "{{ .Values.persistence.data.claimName }}"
+          claimName: "{{ .Values.persistence.data.claimName }}"
 {{- else }}
-          path: "{{ template "fullname" . }}-data"
+          claimName: "{{ template "fullname" . }}-data"
 {{- end }}
       - name: config
-        hostPath:
+        persistentVolumeClaim:
 {{- if .Values.persistence.config.claimName }}
-          path: "{{ .Values.persistence.config.claimName }}"
+          claimName: "{{ .Values.persistence.config.claimName }}"
 {{- else }}
-          path: "{{ template "fullname" . }}-config"
+          claimName: "{{ template "fullname" . }}-config"
 {{- end }}
       - name: transcode
 {{- if .Values.persistence.transcode.enabled }}
