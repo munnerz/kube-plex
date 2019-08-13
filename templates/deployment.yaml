@@ -21,6 +21,7 @@ spec:
       labels:
         app: {{ template "name" . }}
         release: {{ .Release.Name }}
+        component: "executor"
       {{- if .Values.podAnnotations }}
       annotations:
         {{- range $key, $value := .Values.podAnnotations }}
@@ -184,6 +185,7 @@ spec:
       labels:
         app: {{ template "name" . }}-operator
         release: {{ .Release.Name }}
+        component: "operator"
     spec:
       serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}{{ .Values.rbac.serviceAccountName | quote }}{{ end }}
       containers:
@@ -191,6 +193,8 @@ spec:
           image: "{{ .Values.operator.image.repository }}:{{ .Values.operator.image.tag }}"
           imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
           env:
+            - name: PMS_INTERNAL_ADDRESS
+              value: http://{{ template "fullname" . }}:32400
             - name: PLEX_OPERATOR_COMPONENT
               value: operator
             - name: WATCH_NAMESPACE
