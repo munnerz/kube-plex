@@ -121,7 +121,7 @@ spec:
         {{- if .Values.persistence.config.subPath }}
           subPath: {{ .Values.persistence.config.subPath }}
         {{ end }}
-        - name: config
+        - name: transcode
           mountPath: /transcode
         {{- if .Values.persistence.transcode.subPath }}
           subPath: {{ .Values.persistence.transcode.subPath }}
