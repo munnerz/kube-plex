@@ -37,11 +37,11 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `persistence.transcode.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.transcode.storageClass` | Type of persistent volume claim | `-` |
 | `persistence.data.size`         | Size of persistent volume claim | `40Gi` |
-| `persistence.data.existingClaim`| Use an existing PVC to persist data | `nil` |
+| `persistence.data.claimName`| Use an existing PVC to persist data | `nil` |
 | `persistence.data.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.data.storageClass` | Type of persistent volume claim | `-` |
 | `persistence.config.size`         | Size of persistent volume claim | `20Gi` |
-| `persistence.config.existingClaim`| Use an existing PVC to persist data | `nil` |
+| `persistence.config.claimName`| Use an existing PVC to persist data | `nil` |
 | `persistence.config.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.config.storageClass` | Type of persistent volume claim | `-` |
 | `resources`                | CPU/Memory resource requests/limits | `{}` |
