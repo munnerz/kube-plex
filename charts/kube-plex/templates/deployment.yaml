@@ -83,9 +83,11 @@ spec:
         env:
         - name: TZ
           value: "{{ .Values.timezone }}"
-        # TODO: move this to a secret?
         - name: PLEX_CLAIM
-          value: "{{ .Values.claimToken }}"
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "claimTokenSecretName" . }}
+              key: {{ .Values.claimToken.secretKey }}
         # kube-plex env vars
         - name: PMS_INTERNAL_ADDRESS
           value: http://{{ template "fullname" . }}:32400

@@ -14,7 +14,12 @@ kubePlex:
     pullPolicy: Always
 
 # Override this with the plex claim token from plex.tv/claim
-claimToken: ""
+claimToken:
+  ## secret containing your claimToken. if not set it will create a secret instead using claimToken.value
+  secret:
+  secretKey: claimToken
+  ## only specify value if you are passing in the plain text claimToken
+  value:
 
 # Set the timezone of the plex server
 timezone: Europe/London
