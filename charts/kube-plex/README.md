@@ -13,8 +13,8 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `kubePlex.image.repository`         | Image repository | `quay.io/munnerz/kube-plex` |
 | `kubePlex.image.tag`                | Image tag. | `latest`|
 | `kubePlex.image.pullPolicy`         | Image pull policy | `IfNotPresent` |
-| `claimToken.secret`                 | Premade secret holding the Plex Claim Token to authenticate your acount. Must set this or `claimToken.value` | `` |
-| `claimToken.secretKey`                 | The key in the above secret that holds the Plex Claim Toke | `claimToken` |
+| `claimToken.secret`                 | Existing secret name holding the Plex Claim Token to authenticate your acount. Must set this or `claimToken.value` | `` |
+| `claimToken.secretKey`                 | The key in the above secret that holds the Plex Claim Token | `claimToken` |
 | `claimToken.value`                 | The plain-text Plex Claim Token. Set this if not using `claimToken.secret` | `` |
 | `timezone`                 | Timezone plex instance should run as, e.g. 'America/New_York' | `Europe/London` |
 | `service.type`          | Kubernetes service type for the plex GUI/API | `ClusterIP` |
