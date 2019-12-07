@@ -83,6 +83,10 @@ spec:
         env:
         - name: TZ
           value: "{{ .Values.timezone }}"
+        - name: PLEX_CLAIM_SECRET_NAME
+          value: {{ template "claimTokenSecretName" . }}
+        - name: PLEX_CLAIM_SECRET_KEY
+          value: {{ .Values.claimToken.secretKey }}
         - name: PLEX_CLAIM
           valueFrom:
             secretKeyRef:

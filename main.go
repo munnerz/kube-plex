@@ -31,11 +31,16 @@ var namespace = os.Getenv("KUBE_NAMESPACE")
 var pmsImage = os.Getenv("PMS_IMAGE")
 var pmsInternalAddress = os.Getenv("PMS_INTERNAL_ADDRESS")
 
+// the info about where the plex claim secret is held
+// instead of passing the claim in plain text to the pods, we pass the secret
+var plexClaimSecretName = os.Getenv("PLEX_CLAIM_SECRET_NAME")
+var plexClaimSecretKey = os.Getenv("PLEX_CLAIM_SECRET_KEY")
+
 func main() {
 	env := os.Environ()
 	args := os.Args
 
-	rewriteEnv(env)
+	env = rewriteEnv(env)
 	rewriteArgs(args)
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -83,9 +88,20 @@ func main() {
 	}
 }
 
+func removeValFromEnvSlice(s []string, r string) []string {
+	for i, v := range s {
+		splitvar := strings.SplitN(v, "=", 2)
+		if splitvar[0] == r {
+			return append(s[:i], s[i+1:]...)
+		}
+	}
+	return s
+}
+
 // rewriteEnv rewrites environment variables to be passed to the transcoder
-func rewriteEnv(in []string) {
-	// no changes needed
+func rewriteEnv(in []string) []string {
+	in = removeValFromEnvSlice(in, "PLEX_CLAIM")
+	return in
 }
 
 func rewriteArgs(in []string) {
@@ -101,6 +117,7 @@ func rewriteArgs(in []string) {
 
 func generatePod(cwd string, env []string, args []string) *corev1.Pod {
 	envVars := toCoreV1EnvVar(env)
+	envVars = addFromSecretsToCoreV1EnvVar(envVars)
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "pms-elastic-transcoder-",
@@ -163,6 +180,23 @@ func generatePod(cwd string, env []string, args []string) *corev1.Pod {
 			},
 		},
 	}
+}
+
+func addFromSecretsToCoreV1EnvVar(vars []corev1.EnvVar) []corev1.EnvVar {
+	secrets := []corev1.EnvVar{
+		{
+			Name: "PLEX_CLAIM",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: plexClaimSecretName,
+					},
+					Key: plexClaimSecretKey,
+				},
+			},
+		},
+	}
+	return append(vars, secrets...)
 }
 
 func toCoreV1EnvVar(in []string) []corev1.EnvVar {
