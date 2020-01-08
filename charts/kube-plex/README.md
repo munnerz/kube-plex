@@ -48,5 +48,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `proxy.http`           | HTTP_PROXY value 'http://proxy.lan:8080'  | `{}` |
 | `proxy.https`           | HTTPS_PROXY value 'http://proxy.lan:8080'  | `{}` |
 | `proxy.noproxy`           | NO_PROXY value 'localhost,127.0.0.1,10.96.0.0/12,10.244.0.0/12'  | `{}` |
+| `tolerations`           | Pod tolerations  | `[]` |
+| `affinity`           | Pod affinity configuration  | `{}` |
 
 Read through the [values.yaml](values.yaml) file. It has several commented out suggested values.
