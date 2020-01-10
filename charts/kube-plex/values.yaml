@@ -90,6 +90,8 @@ persistence:
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 40Gi
+    # Access mode for this volume
+    accessMode: ReadWriteMany
   config:
     # Optionally specify claimName to manually override the PVC to be used for
     # the config directory. If claimName is specified, storageClass and size
@@ -103,6 +105,7 @@ persistence:
     # The requested size of the volume to be used when creating a
     # PersistentVolumeClaim.
     size: 20Gi
+    # Access mode for this volume
     accessMode: ReadWriteMany
 
 resources: {}
