@@ -39,7 +39,7 @@ media, you can specify its name with `--set persistence.data.claimName`. If not
 specified, a persistent volume will be automatically provisioned for you.
 
 ```bash
-➜  helm install ./charts/kube-plex --name plex \
+➜  helm install plex ./charts/kube-plex \
     --namespace plex \
     --set claimToken=[insert claim token here] \
     --set persistence.data.claimName=existing-pms-data-pvc \
