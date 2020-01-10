@@ -38,10 +38,12 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `persistence.data.existingClaim`| Use an existing PVC to persist data | `nil` |
 | `persistence.data.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.data.storageClass` | Type of persistent volume claim | `-` |
+| `persistence.data.accessMode` | Persistent volume access mode | `ReadWriteMany` |
 | `persistence.config.size`         | Size of persistent volume claim | `20Gi` |
 | `persistence.config.existingClaim`| Use an existing PVC to persist data | `nil` |
 | `persistence.config.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.config.storageClass` | Type of persistent volume claim | `-` |
+| `persistence.config.accessMode` | Persistent volume access mode | `ReadWriteMany` |
 | `resources`                | CPU/Memory resource requests/limits | `{}` |
 | `podAnnotations`           | Key-value pairs to add as pod annotations  | `{}` |
 | `proxy.enable`           | use to enable PMS proxy environmental variable  | `{false}` |
