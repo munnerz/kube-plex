@@ -139,9 +139,7 @@ func generatePod(cwd string, env []string, args []string) *corev1.Pod {
 				{
 					Name: "data",
 					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: dataPVC,
-						},
+						HostPath: &corev1.HostPathVolumeSource{Path: "/mnt/disks/gdrive"},
 					},
 				},
 				{
