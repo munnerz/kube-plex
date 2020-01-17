@@ -55,7 +55,7 @@ metadata:
     component: data
 spec:
   accessModes:
-  - ReadWriteMany
+  - {{ .Values.persistence.data.accessMode | quote }}
   resources:
     requests:
       storage: {{ .Values.persistence.data.size | quote }}

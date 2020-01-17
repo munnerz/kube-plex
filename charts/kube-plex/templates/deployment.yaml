@@ -113,6 +113,20 @@ spec:
 {{- else }}
           value: "{{ template "fullname" . }}-config"
 {{- end }}
+{{- if .Values.proxy.enable }}
+  {{- if .Values.proxy.http }}
+        - name: "HTTP_PROXY"
+          value: "{{.Values.proxy.http}}"
+  {{- end }}
+  {{- if .Values.proxy.https }}
+        - name: "HTTPS_PROXY"
+          value: "{{.Values.proxy.https}}"
+  {{- end }}
+  {{- if .Values.proxy.noproxy }}
+        - name: "NO_PROXY"
+          value: "{{.Values.proxy.noproxy}}"
+  {{- end }}
+{{- end }}
         volumeMounts:
         - name: data
           mountPath: /data
@@ -165,3 +179,11 @@ spec:
 {{- end }}
       - name: shared
         emptyDir: {}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
