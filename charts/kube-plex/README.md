@@ -39,6 +39,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `persistence.data.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.data.storageClass` | Type of persistent volume claim | `-` |
 | `persistence.data.accessMode` | Persistent volume access mode | `ReadWriteMany` |
+| `persistence.extraData` | Extra data mounts.  Should be an array of items matching persistence.data entries | `[]` |
 | `persistence.config.size`         | Size of persistent volume claim | `20Gi` |
 | `persistence.config.claimName`| Use an existing PVC to persist data | `nil` |
 | `persistence.config.subPath` | SubPath to use for existing Claim | `nil` |
