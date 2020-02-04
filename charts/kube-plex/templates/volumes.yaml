@@ -11,7 +11,7 @@ metadata:
     component: transcode
 spec:
   accessModes:
-  - ReadWriteMany
+  - {{ .Values.persistence.config.accessMode | quote }}
   resources:
     requests:
       storage: {{ .Values.persistence.transcode.size | quote }}
