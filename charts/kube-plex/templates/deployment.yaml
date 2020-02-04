@@ -143,6 +143,10 @@ spec:
         {{- if .Values.persistence.transcode.subPath }}
           subPath: {{ .Values.persistence.transcode.subPath }}
         {{ end }}
+        {{-  range .Values.persistence.extraData }}
+        - mountPath: "/data-{{ .name }}"
+          name: "extradata-{{ .name }}"
+        {{- end }}
         - name: shared
           mountPath: /shared
         resources:
@@ -176,6 +180,15 @@ spec:
 {{- end }}
 {{- else }}
         emptyDir: {}
+{{- end }}
+{{-  range .Values.persistence.extraData }}
+      - name: "extradata-{{ .name }}"
+        persistentVolumeClaim:
+{{- if .claimName }}
+          claimName: "{{ .claimName }}"
+{{- else }}
+          claimName: "extradata-{{ .name }}"
+{{- end }}
 {{- end }}
       - name: shared
         emptyDir: {}

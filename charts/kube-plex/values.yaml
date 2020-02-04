@@ -94,6 +94,13 @@ persistence:
     size: 40Gi
     # Access mode for this volume
     accessMode: ReadWriteMany
+  extraData: []
+    # Optionally specifify additional Data mounts.  These will be mounted as
+    # /data-${name}.  This should be in the same format as the above 'data', 
+    # with the additional field 'name'
+    # - claimName: "special-tv"
+    #   name: 'foo'
+
   config:
     # Optionally specify claimName to manually override the PVC to be used for
     # the config directory. If claimName is specified, storageClass and size
