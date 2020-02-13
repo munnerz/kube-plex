@@ -47,7 +47,6 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `persistence.config.storageClass` | Type of persistent volume claim | `-` |
 | `persistence.config.accessMode` | Persistent volume access mode | `ReadWriteMany` |
 | `resources`                | CPU/Memory resource requests/limits | `{}` |
-| `podAnnotations`           | Key-value pairs to add as pod annotations  | `{}` |
 | `proxy.enable`           | use to enable PMS proxy environmental variable  | `{false}` |
 | `proxy.http`           | HTTP_PROXY value 'http://proxy.lan:8080'  | `{}` |
 | `proxy.https`           | HTTPS_PROXY value 'http://proxy.lan:8080'  | `{}` |
