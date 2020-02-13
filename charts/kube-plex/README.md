@@ -54,5 +54,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `proxy.noproxy`           | NO_PROXY value 'localhost,127.0.0.1,10.96.0.0/12,10.244.0.0/12'  | `{}` |
 | `tolerations`           | Pod tolerations  | `[]` |
 | `affinity`           | Pod affinity configuration  | `{}` |
+| `podAnnotations`           | Key-value pairs to add as pod annotations  | `{}` |
+| `deploymentAnnotations`           | Key-value pairs to add as deployment annotations  | `{}` |
 
 Read through the [values.yaml](values.yaml) file. It has several commented out suggested values.

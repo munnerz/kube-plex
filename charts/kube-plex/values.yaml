@@ -131,6 +131,8 @@ resources: {}
 
 podAnnotations: {}
 
+deploymentAnnotations: {}
+
 proxy: 
   # This allows to set a proxy environment variable, which PMS uses to fetch the token and assets like movie cover
   enable: false
