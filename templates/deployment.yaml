@@ -110,6 +110,10 @@ spec:
             fieldRef:
               fieldPath: metadata.name
 {{- end }}
+{{- if .Values.persistence.config.transcoderPod }}
+        - name: CONFIG_TRANSCODER_PVC
+          value: "{{ .Values.persistence.config.transcoderPod }}"
+{{- end }}
         volumeMounts:
         - name: data
           mountPath: /data
@@ -136,30 +140,38 @@ spec:
     {{- end }}
       volumes:
       - name: data
+      {{- if and .Values.persistence.data.enabled (not .Values.persistence.data.hostPath) }}
         persistentVolumeClaim:
-{{- if .Values.persistence.data.claimName }}
-          claimName: "{{ .Values.persistence.data.claimName }}"
-{{- else }}
-          claimName: "{{ template "fullname" . }}-data"
-{{- end }}
-      - name: config
-        persistentVolumeClaim:
-{{- if .Values.persistence.config.claimName }}
-          claimName: "{{ .Values.persistence.config.claimName }}"
-{{- else }}
-          claimName: "{{ template "fullname" . }}-config"
-{{- end }}
-      - name: transcode
-{{- if .Values.persistence.transcode.enabled }}
-        persistentVolumeClaim:
-{{- if .Values.persistence.transcode.claimName }}
-          claimName: "{{ .Values.persistence.transcode.claimName }}"
-{{- else }}
-          claimName: "{{ template "fullname" . }}-transcode"
-{{- end }}
-{{- else }}
+          claimName: {{ if .Values.persistence.data.existingClaim }}{{ .Values.persistence.data.existingClaim }}{{- else }}{{ template "fullname" . }}-data{{- end }}
+      {{- else if and .Values.persistence.data.enabled .Values.persistence.data.hostPath }}
+        hostPath:
+          path: {{ .Values.persistence.data.hostPath }}
+          type: DirectoryOrCreate
+      {{- else }}
         emptyDir: {}
-{{- end }}
+      {{- end }}
+      - name: config
+      {{- if and .Values.persistence.config.enabled (not .Values.persistence.config.hostPath) }}
+        persistentVolumeClaim:
+          claimName: {{ if .Values.persistence.config.existingClaim }}{{ .Values.persistence.config.existingClaim }}{{- else }}{{ template "fullname" . }}-config{{- end }}
+      {{- else if and .Values.persistence.config.enabled .Values.persistence.config.hostPath }}
+        hostPath:
+          path: {{ .Values.persistence.config.hostPath }}
+          type: DirectoryOrCreate
+      {{- else }}
+        emptyDir: {}
+      {{- end }}
+      - name: transcode
+      {{- if and .Values.persistence.transcode.enabled (not .Values.persistence.transcode.hostPath) }}
+        persistentVolumeClaim:
+          claimName: {{ if .Values.persistence.transcode.existingClaim }}{{ .Values.persistence.transcode.existingClaim }}{{- else }}{{ template "fullname" . }}-transcode{{- end }}
+      {{- else if and .Values.persistence.transcode.enabled .Values.persistence.transcode.hostPath }}
+        hostPath:
+          path: {{ .Values.persistence.transcode.hostPath }}
+          type: DirectoryOrCreate
+      {{- else }}
+        emptyDir: {}
+      {{- end }}
       - name: shared
         emptyDir: {}
 ---
@@ -197,6 +209,10 @@ spec:
               value: http://{{ template "fullname" . }}:32400
             - name: PLEX_OPERATOR_COMPONENT
               value: operator
+          {{- if .Values.persistence.config.transcoderPod }}
+            - name: CONFIG_TRANSCODER_PVC
+              value: "{{ .Values.persistence.config.transcoderPod }}"
+          {{- end }}
             - name: WATCH_NAMESPACE
               valueFrom:
                 fieldRef:

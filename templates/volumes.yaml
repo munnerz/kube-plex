@@ -1,4 +1,4 @@
-{{- if and (not .Values.persistence.transcode.claimName) .Values.persistence.transcode.enabled }}
+{{- if and (not .Values.persistence.transcode.existingClaim) .Values.persistence.transcode.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -20,7 +20,7 @@ spec:
 {{- end }}
 ---
 {{- end }}
-{{- if not .Values.persistence.config.claimName }}
+{{- if and .Values.persistence.config.enabled (not .Values.persistence.config.existingClaim) (not .Values.persistence.config.hostPath) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -42,7 +42,7 @@ spec:
 {{- end }}
 ---
 {{- end }}
-{{- if not .Values.persistence.data.claimName }}
+{{- if and .Values.persistence.data.enabled (not .Values.persistence.data.existingClaim) (not .Values.persistence.data.hostPath) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
