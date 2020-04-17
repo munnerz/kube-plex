@@ -135,25 +135,25 @@ spec:
   {{- end }}
 {{- end }}
 # Official kube-plex container environment variables
-{{- if .Values.advertise_ip }}
+{{- if .Values.advertiseIp }}
         - name: "ADVERTISE_IP"
-          value: "{{.Values.advertise_ip}}"
+          value: "{{.Values.advertiseIp}}"
 {{- end }}
-{{- if .Values.change_config_dir_ownership }}
+{{- if .Values.changeConfigDirOwnership }}
         - name: "CHANGE_CONFIG_DIR_OWNERSHIP"
-          value: "{{.Values.change_config_dir_ownership}}"
+          value: "{{.Values.changeConfigDirOwnership}}"
 {{- end }}
-{{- if .Values.allowed_networks }}
+{{- if .Values.allowedNetworks }}
         - name: "ALLOWED_NETWORKS"
-          value: "{{include "joinListWithComma" .Values.allowed_networks}}"
+          value: "{{include "joinListWithComma" .Values.allowedNetworks}}"
 {{- end }}
-{{- if .Values.plex_uid }}
+{{- if .Values.plexUid }}
         - name: "PLEX_UID"
-          value: "{{.Values.plex_uid}}"
+          value: "{{.Values.plexUid}}"
 {{- end }}
-{{- if .Values.plex_gid }}
+{{- if .Values.plexGid }}
         - name: "PLEX_GID"
-          value: "{{.Values.plex_gid}}"
+          value: "{{.Values.plexGid}}"
 {{- end }}
         volumeMounts:
         - name: data

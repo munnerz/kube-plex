@@ -22,28 +22,28 @@ timezone: Europe/London
 # add your pod network subnet to the `List of IP addresses and networks that are allowed without auth`
 # This will override the manual settings, so only use this if you will not need to change it manually.
 # This list will be automatically converted to a command seperated string when passed to the container.
-# You would specify this when using helm CLI with --set allowed_networks="{127.0.0.1,10.54.2.0/24}"
-# allowed_networks: 
+# You would specify this when using helm CLI with --set allowedNetworks="{127.0.0.1,10.54.2.0/24}"
+# allowedNetworks: 
 #   -   127.0.0.1
 #   -   10.54.2.0/24
 
 # Instruct the Plex Media Server Container to Change the Configuration Directory Ownership
 # Default is true, you would only need to set this if you want to disable it.
-# change_config_dir_ownership: true
+# changeConfigDirOwnership: true
 
-# ADVERTISE_IP This variable defines the additional IPs on which the server may be be found. 
+# advertiseIp This variable defines the additional IPs on which the server may be be found. 
 # For example: http://10.1.1.23:32400. 
 # This adds to the list where the server advertises that it can be found.
 # See https://hub.docker.com/r/plexinc/pms-docker/ for details
-# advertise_ip: "http://10.1.1.23:32400"
+# advertiseIp: "http://10.1.1.23:32400"
 
 # Set The user id of the plex user created inside the container.
 # See https://hub.docker.com/r/plexinc/pms-docker/ for details
-# plex_uid: 1000
+# plexUid: 1000
 
 # Set The group id of the plex group created inside the container
 # See https://hub.docker.com/r/plexinc/pms-docker/ for details
-# plex_gid: 1000
+# plexGid: 1000
 
 service:
   type: ClusterIP
