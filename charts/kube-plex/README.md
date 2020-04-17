@@ -15,6 +15,11 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `kubePlex.image.pullPolicy`         | Image pull policy | `IfNotPresent` |
 | `claimToken`                 | Plex Claim Token to authenticate your acount | `` |
 | `timezone`                 | Timezone plex instance should run as, e.g. 'America/New_York' | `Europe/London` |
+| `allowed_networks`                 | List of IP addresses and networks that are allowed without auth' | `nil` |
+| `change_config_dir_ownership`                 | Instruct the Plex Media Server Container to Change the Configuration Directory Ownership | `nil` |
+| `advertise_ip`                 | This adds to the list where the server advertises that it can be found.' | `nil` |
+| `plex_uid`                 | The user id of the plex user created inside the container' | `nil` |
+| `plex_gid`                 | The group id of the plex group created inside the container | `nil` |
 | `service.type`          | Kubernetes service type for the plex GUI/API | `ClusterIP` |
 | `service.port`          | Kubernetes port where the plex GUI/API is exposed| `32400` |
 | `service.annotations`   | Service annotations for the Plex GUI | `{}` |
