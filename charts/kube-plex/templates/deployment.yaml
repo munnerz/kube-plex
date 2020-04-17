@@ -134,6 +134,27 @@ spec:
           value: "{{.Values.proxy.noproxy}}"
   {{- end }}
 {{- end }}
+# Official kube-plex container environment variables
+{{- if .Values.advertise_ip }}
+        - name: "ADVERTISE_IP"
+          value: "{{.Values.advertise_ip}}"
+{{- end }}
+{{- if .Values.change_config_dir_ownership }}
+        - name: "CHANGE_CONFIG_DIR_OWNERSHIP"
+          value: "{{.Values.change_config_dir_ownership}}"
+{{- end }}
+{{- if .Values.allowed_networks }}
+        - name: "ALLOWED_NETWORKS"
+          value: "{{include "joinListWithComma" .Values.allowed_networks}}"
+{{- end }}
+{{- if .Values.plex_uid }}
+        - name: "PLEX_UID"
+          value: "{{.Values.plex_uid}}"
+{{- end }}
+{{- if .Values.plex_gid }}
+        - name: "PLEX_GID"
+          value: "{{.Values.plex_gid}}"
+{{- end }}
         volumeMounts:
         - name: data
           mountPath: /data
