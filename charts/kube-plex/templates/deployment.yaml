@@ -155,6 +155,11 @@ spec:
         - name: "PLEX_GID"
           value: "{{.Values.plexGid}}"
 {{- end }}
+# Extra ENV Values supplied by user
+{{- range $key, $value := .Values.extraEnv }}
+        - name: {{ $key }}
+          value: {{ $value }}
+{{- end }}
         volumeMounts:
         - name: data
           mountPath: /data
@@ -207,7 +212,7 @@ spec:
           claimName: "{{ template "fullname" . }}-transcode"
 {{- end }}
 {{- else }}
-        emptyDir: {}
+        emptyDir: {}          
 {{- end }}
 {{-  range .Values.persistence.extraData }}
       - name: "extradata-{{ .name }}"
