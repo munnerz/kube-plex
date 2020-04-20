@@ -45,6 +45,12 @@ timezone: Europe/London
 # See https://hub.docker.com/r/plexinc/pms-docker/ for details
 # plexGid: 1000
 
+# You can add Additional ENV variables here
+# The following is the same as --set extraEnv.TMPDIR="/transcode" 
+# extraEnv:
+#   TMPDIR: /transcode
+
+  
 service:
   type: ClusterIP
   port: 32400
@@ -91,6 +97,8 @@ nodeSelector:
 
 persistence:
   transcode:
+    # We want to enable a transcode pvc
+    enabled: false
     # Optionally specify claimName to manually override the PVC to be used for
     # the transcode directory. If claimName is specified, storageClass and size
     # are ignored.
