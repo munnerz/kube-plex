@@ -20,6 +20,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `advertiseIp`                 | This adds to the list where the server advertises that it can be found.' | `nil` |
 | `plexUid`                 | The user id of the plex user created inside the container' | `nil` |
 | `plexGid`                 | The group id of the plex group created inside the container | `nil` |
+| `extraEnv`                 | Pass arbitrary environment variables to the Plex container as a map. See values.yaml for details | `nil` |
 | `service.type`          | Kubernetes service type for the plex GUI/API | `ClusterIP` |
 | `service.port`          | Kubernetes port where the plex GUI/API is exposed| `32400` |
 | `service.annotations`   | Service annotations for the Plex GUI | `{}` |
