@@ -182,6 +182,11 @@ spec:
         {{- end }}
         - name: shared
           mountPath: /shared
+{{- if .Values.configMap.plexPreferences.enabled }}
+        - name: {{ .Values.configMap.plexPreferences.name }}
+          mountPath: {{ .Values.configMap.plexPreferences.mountPath }}
+          subPath: {{ .Values.configMap.plexPreferences.subPath }}
+{{- end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
     {{- if .Values.nodeSelector }}
@@ -189,6 +194,12 @@ spec:
 {{ toYaml .Values.nodeSelector | indent 8 }}
     {{- end }}
       volumes:
+{{- if .Values.configMap.plexPreferences.enabled }}
+      - name: {{ .Values.configMap.plexPreferences.name }}
+        configMap:
+          name: {{ .Values.configMap.plexPreferences.name }}
+          defaultMode: {{ .Values.configMap.plexPreferences.defaultMode }}
+{{- end }}
       - name: data
         persistentVolumeClaim:
 {{- if .Values.persistence.data.claimName }}
