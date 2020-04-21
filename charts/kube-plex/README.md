@@ -35,6 +35,11 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `ingress.tls`                  | Ingress TLS configuration | `[]` |
 | `rbac.create`                  | Create RBAC roles? | `true` |
 | `nodeSelector`             | Node labels for pod assignment | `beta.kubernetes.io/arch: amd64` |
+| `configMap.plexPreferences.enabled`             | Enable init script(and load configMap) that will read all environment variables starting with PLEX_PREFERENCE_ | `false` |
+| `configMap.plexPreferences.name`             | Name of configMap | `41-plex-preferences` |
+| `configMap.plexPreferences.defaultMode`             | Unix permissions in container (0755) | `493` |
+| `configMap.plexPreferences.mountPath`             | The full path to the file we will mount the configMap to | `/etc/cont-init.d/41-plex-preferences` |
+| `configMap.plexPreferences.subPath`             | And use subpath to mount it as an individual file not a volume  | `41-plex-preferences` |
 | `persistence.transcode.enabled`      | Use persistent volume for transcoding | `false` |
 | `persistence.transcode.size`         | Size of persistent volume claim | `20Gi` |
 | `persistence.transcode.claimName`| Use an existing PVC to persist data | `nil` |
