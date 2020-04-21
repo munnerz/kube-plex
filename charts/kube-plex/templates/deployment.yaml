@@ -212,7 +212,12 @@ spec:
           claimName: "{{ template "fullname" . }}-transcode"
 {{- end }}
 {{- else }}
+{{- if .Values.persistence.transcode.emptyDir.medium }}
+        emptyDir: 
+          medium: "{{ .Values.persistence.transcode.emptyDir.medium }}"
+{{- else }}
         emptyDir: {}          
+{{- end }}
 {{- end }}
 {{-  range .Values.persistence.extraData }}
       - name: "extradata-{{ .name }}"
