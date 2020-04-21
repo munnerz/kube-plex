@@ -41,6 +41,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `persistence.transcode.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.transcode.storageClass` | Type of persistent volume claim | `-` |
 | `persistence.transcode.accessMode` | Persistent volume access mode | `ReadWriteMany` |
+| `persistence.transcode.emptyDir.medium` | Set this if you want to use tmpfs (in-memory) file system for /transcode | `Memory` |
 | `persistence.data.size`         | Size of persistent volume claim | `40Gi` |
 | `persistence.data.claimName`| Use an existing PVC to persist data | `nil` |
 | `persistence.data.subPath` | SubPath to use for existing Claim | `nil` |
