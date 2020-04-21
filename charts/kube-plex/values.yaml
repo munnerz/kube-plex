@@ -113,6 +113,11 @@ persistence:
     size: 20Gi
     # Access mode for this volume
     accessMode: ReadWriteMany
+    # If not using a transcode PVC, specify emptyDir.medium="Memory" to use a tmpfs (in-memory)
+    # Volume for /transcode. Warning! this will greatly increase the amount of memory the plex pod is using
+    # AND it will count toward any ram pod/namespace limits.
+    # emptyDir:
+    #   medium: "Memory"
   data:
     # Optionally specify claimName to manually override the PVC to be used for
     # the data directory. If claimName is specified, storageClass and size are
