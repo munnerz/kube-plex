@@ -95,6 +95,25 @@ rbac:
 nodeSelector:
   beta.kubernetes.io/arch: amd64
 
+configMap:
+  # Enable init script that will read all environment variables starting with PLEX_PREFERENCE_
+  # and take the value as the Key:Value option to set in Plex Preference.xml
+  # You can use extraEnv to add the addtional ENV's to the container.
+  # --set extraEnv.PLEX_PREFERENCE_1="FriendlyName=plex-kube-plex-test1" `
+  # --set extraEnv.PLEX_PREFERENCE_2="EnableIPv6=0" `
+  # --set extraEnv.PLEX_PREFERENCE_3="logDebug=0" `
+  # --set extraEnv.PLEX_PREFERENCE_4="DisableTLSv1_0=1" `
+  # --set extraEnv.PLEX_PREFERENCE_5="LanNetworksBandwidth=xxx.xxx.xxx.0/18\,xxx.xxx.xxx.0/24\,xxx.xxx.xxx.0/24" `
+  # --set extraEnv.PLEX_PREFERENCE_6="TranscoderQuality=2" `
+  # --set extraEnv.PLEX_PREFERENCE_7="TreatWanIpAsLocal=0" `
+  # --set extraEnv.PLEX_PREFERENCE_8="TranscoderH264BackgroundPreset=fast" 
+  plexPreferences:
+    enabled: false
+    name: 41-plex-preferences
+    defaultMode: 493
+    mountPath: /etc/cont-init.d/41-plex-preferences
+    subPath: 41-plex-preferences
+
 persistence:
   transcode:
     # We want to enable a transcode pvc
