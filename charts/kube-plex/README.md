@@ -20,6 +20,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `advertiseIp`                 | This adds to the list where the server advertises that it can be found.' | `nil` |
 | `plexUid`                 | The user id of the plex user created inside the container' | `nil` |
 | `plexGid`                 | The group id of the plex group created inside the container | `nil` |
+| `extraEnv`                 | Pass arbitrary environment variables to the Plex container as a map. See values.yaml for details | `nil` |
 | `service.type`          | Kubernetes service type for the plex GUI/API | `ClusterIP` |
 | `service.port`          | Kubernetes port where the plex GUI/API is exposed| `32400` |
 | `service.annotations`   | Service annotations for the Plex GUI | `{}` |
@@ -34,12 +35,18 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `ingress.tls`                  | Ingress TLS configuration | `[]` |
 | `rbac.create`                  | Create RBAC roles? | `true` |
 | `nodeSelector`             | Node labels for pod assignment | `beta.kubernetes.io/arch: amd64` |
+| `configMap.plexPreferences.enabled`             | Enable init script(and load configMap) that will read all environment variables starting with PLEX_PREFERENCE_ | `false` |
+| `configMap.plexPreferences.name`             | Name of configMap | `41-plex-preferences` |
+| `configMap.plexPreferences.defaultMode`             | Unix permissions in container (0755) | `493` |
+| `configMap.plexPreferences.mountPath`             | The full path to the file we will mount the configMap to | `/etc/cont-init.d/41-plex-preferences` |
+| `configMap.plexPreferences.subPath`             | And use subpath to mount it as an individual file not a volume  | `41-plex-preferences` |
 | `persistence.transcode.enabled`      | Use persistent volume for transcoding | `false` |
 | `persistence.transcode.size`         | Size of persistent volume claim | `20Gi` |
 | `persistence.transcode.claimName`| Use an existing PVC to persist data | `nil` |
 | `persistence.transcode.subPath` | SubPath to use for existing Claim | `nil` |
 | `persistence.transcode.storageClass` | Type of persistent volume claim | `-` |
 | `persistence.transcode.accessMode` | Persistent volume access mode | `ReadWriteMany` |
+| `persistence.transcode.emptyDir.medium` | Set this if you want to use tmpfs (in-memory) file system for /transcode | `Memory` |
 | `persistence.data.size`         | Size of persistent volume claim | `40Gi` |
 | `persistence.data.claimName`| Use an existing PVC to persist data | `nil` |
 | `persistence.data.subPath` | SubPath to use for existing Claim | `nil` |
