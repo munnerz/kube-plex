@@ -19,7 +19,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `service.port`          | Kubernetes port where the plex GUI/API is exposed| `32400` |
 | `service.annotations`   | Service annotations for the Plex GUI | `{}` |
 | `service.labels`        | Custom labels | `{}` |
-| `service.loadBalancerIP` | Loadbalance IP for the Plex GUI | `{}` |
+| `service.loadBalancerIP` | Load balancer IP for the Plex GUI; set `service.type` to `LoadBalancer` to use this. | `{}` |
 | `service.loadBalancerSourceRanges` | List of IP CIDRs allowed access to load balancer (if supported)      | None
 | `ingress.enabled`              | Enables Ingress | `false` |
 | `ingress.annotations`          | Ingress annotations | `{}` |
