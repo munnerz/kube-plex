@@ -1,0 +1,14 @@
+{{- if .Values.configMap.plexPreferences.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.configMap.plexPreferences.name }}
+  labels:
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+
+data:
+# At some point figure out how to use a value/Variable here to be able to specify 
+# a different file or something.
+{{ (tpl (.Files.Glob "configs/41-plex-preferences").AsConfig . ) | indent 2 }}
+{{- end -}}

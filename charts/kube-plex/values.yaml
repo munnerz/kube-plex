@@ -19,6 +19,38 @@ claimToken: ""
 # Set the timezone of the plex server
 timezone: Europe/London
 
+# add your pod network subnet to the `List of IP addresses and networks that are allowed without auth`
+# This will override the manual settings, so only use this if you will not need to change it manually.
+# This list will be automatically converted to a command seperated string when passed to the container.
+# You would specify this when using helm CLI with --set allowedNetworks="{127.0.0.1,10.54.2.0/24}"
+# allowedNetworks: 
+#   -   127.0.0.1
+#   -   10.54.2.0/24
+
+# Instruct the Plex Media Server Container to Change the Configuration Directory Ownership
+# Default is true, you would only need to set this if you want to disable it.
+# changeConfigDirOwnership: true
+
+# advertiseIp This variable defines the additional IPs on which the server may be be found. 
+# For example: http://10.1.1.23:32400. 
+# This adds to the list where the server advertises that it can be found.
+# See https://hub.docker.com/r/plexinc/pms-docker/ for details
+# advertiseIp: "http://10.1.1.23:32400"
+
+# Set The user id of the plex user created inside the container.
+# See https://hub.docker.com/r/plexinc/pms-docker/ for details
+# plexUid: 1000
+
+# Set The group id of the plex group created inside the container
+# See https://hub.docker.com/r/plexinc/pms-docker/ for details
+# plexGid: 1000
+
+# You can add Additional ENV variables here
+# The following is the same as --set extraEnv.TMPDIR="/transcode" 
+# extraEnv:
+#   TMPDIR: /transcode
+
+  
 service:
   type: ClusterIP
   port: 32400
@@ -63,8 +95,29 @@ rbac:
 nodeSelector:
   beta.kubernetes.io/arch: amd64
 
+configMap:
+  # Enable init script that will read all environment variables starting with PLEX_PREFERENCE_
+  # and take the value as the Key:Value option to set in Plex Preference.xml
+  # You can use extraEnv to add the addtional ENV's to the container.
+  # --set extraEnv.PLEX_PREFERENCE_1="FriendlyName=plex-kube-plex-test1" `
+  # --set extraEnv.PLEX_PREFERENCE_2="EnableIPv6=0" `
+  # --set extraEnv.PLEX_PREFERENCE_3="logDebug=0" `
+  # --set extraEnv.PLEX_PREFERENCE_4="DisableTLSv1_0=1" `
+  # --set extraEnv.PLEX_PREFERENCE_5="LanNetworksBandwidth=xxx.xxx.xxx.0/18\,xxx.xxx.xxx.0/24\,xxx.xxx.xxx.0/24" `
+  # --set extraEnv.PLEX_PREFERENCE_6="TranscoderQuality=2" `
+  # --set extraEnv.PLEX_PREFERENCE_7="TreatWanIpAsLocal=0" `
+  # --set extraEnv.PLEX_PREFERENCE_8="TranscoderH264BackgroundPreset=fast" 
+  plexPreferences:
+    enabled: false
+    name: 41-plex-preferences
+    defaultMode: 493
+    mountPath: /etc/cont-init.d/41-plex-preferences
+    subPath: 41-plex-preferences
+
 persistence:
   transcode:
+    # We want to enable a transcode pvc
+    enabled: false
     # Optionally specify claimName to manually override the PVC to be used for
     # the transcode directory. If claimName is specified, storageClass and size
     # are ignored.
@@ -79,6 +132,11 @@ persistence:
     size: 20Gi
     # Access mode for this volume
     accessMode: ReadWriteMany
+    # If not using a transcode PVC, specify emptyDir.medium="Memory" to use a tmpfs (in-memory)
+    # Volume for /transcode. Warning! this will greatly increase the amount of memory the plex pod is using
+    # AND it will count toward any ram pod/namespace limits.
+    # emptyDir:
+    #   medium: "Memory"
   data:
     # Optionally specify claimName to manually override the PVC to be used for
     # the data directory. If claimName is specified, storageClass and size are
