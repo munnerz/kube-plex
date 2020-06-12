@@ -14,3 +14,14 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- $name := default .Chart.Name .Values.nameOverride -}}
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{/*
+Create the secret name for the claimToken
+*/}}
+{{- define "claimTokenSecretName" -}}
+{{- if .Values.claimToken.secret -}}
+    {{ printf "%s" .Values.claimToken.secret }}
+{{- else -}}
+    {{ printf "%s-%s" (include "fullname" .) "claim-token" | trunc 63 -}}
+{{- end -}}
+{{- end -}}
