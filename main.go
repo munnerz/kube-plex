@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/munnerz/kube-plex/pkg/signals"
+	"gopkg.in/alessio/shellescape.v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -31,16 +33,26 @@ var namespace = os.Getenv("KUBE_NAMESPACE")
 var pmsImage = os.Getenv("PMS_IMAGE")
 var pmsInternalAddress = os.Getenv("PMS_INTERNAL_ADDRESS")
 
+// Whether or not to cleanup the generated pod (for debugging).
+// Defaults to TRUE.
+var cleanUpPod = os.Getenv("KUBE_PLEX_CLEANUP_POD")
+
+// UID/GID settings, if configured
+var plexUID = os.Getenv("PLEX_UID")
+var plexGID = os.Getenv("PLEX_GID")
+
 func main() {
 	env := os.Environ()
 	args := os.Args
 
 	rewriteEnv(env)
-	rewriteArgs(args)
+	args = rewriteArgs(args)
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Error getting working directory: %s", err)
 	}
+	log.Printf("Creating pod with transcode args: %s", args)
 	pod := generatePod(cwd, env, args)
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", "")
@@ -56,6 +68,8 @@ func main() {
 	pod, err = kubeClient.CoreV1().Pods(namespace).Create(pod)
 	if err != nil {
 		log.Fatalf("Error creating pod: %s", err)
+	} else {
+		log.Printf("Pod '%s' created.", pod.Name)
 	}
 
 	stopCh := signals.SetupSignalHandler()
@@ -76,10 +90,12 @@ func main() {
 		log.Printf("Exit requested.")
 	}
 
-	log.Printf("Cleaning up pod...")
-	err = kubeClient.CoreV1().Pods(namespace).Delete(pod.Name, nil)
-	if err != nil {
-		log.Fatalf("Error cleaning up pod: %s", err)
+	if cu, err := strconv.ParseBool(cleanUpPod); cu && err != nil {
+		log.Printf("Cleaning up pod...")
+		err = kubeClient.CoreV1().Pods(namespace).Delete(pod.Name, nil)
+		if err != nil {
+			log.Fatalf("Error cleaning up pod: %s", err)
+		}
 	}
 }
 
@@ -88,7 +104,7 @@ func rewriteEnv(in []string) {
 	// no changes needed
 }
 
-func rewriteArgs(in []string) {
+func rewriteArgs(in []string) []string {
 	for i, v := range in {
 		switch v {
 		case "-progressurl", "-manifest_name", "-segment_list":
@@ -97,6 +113,40 @@ func rewriteArgs(in []string) {
 			in[i+1] = "debug"
 		}
 	}
+
+	var args []string
+
+	// If UID/GID is set, we have to modify the local groups before the transcode is called.
+	if plexUID != "" {
+		log.Printf("PLEX_UID set. Adding usermod command to transcode command.")
+		args = append([]string{fmt.Sprintf("/usr/sbin/usermod -o -u %s plex", plexUID)}, args...)
+	}
+	if plexGID != "" {
+		log.Printf("PLEX_GID set. Adding groupmod command to transcode command.")
+		args = append([]string{fmt.Sprintf("/usr/sbin/groupmod -o -g %s plex", plexGID)}, args...)
+	}
+
+	// Change entrypoint to be bash if we need it for the permissions operations.
+	if plexUID != "" || plexGID != "" {
+		log.Printf("PLEX_UID || PLEX_GID set. Prefixing transcode command with bash.")
+
+		//Replace the space in "Plex Transcoder" path
+		in[0] = strings.Replace(in[0], " ", "\\ ", 1)
+
+		var escaped_in []string
+		escaped_in = append(escaped_in, in[0])
+		for _, v := range in[1:] {
+			escaped_in = append(escaped_in, shellescape.Quote(v))
+		}
+
+		args = append([]string{"/bin/bash", "-c"},
+			fmt.Sprintf("%s && su plex -s /bin/bash -c %s",
+				strings.Join(args, " && "),
+				shellescape.Quote(strings.Join(escaped_in, " "))))
+	} else {
+		return in
+	}
+	return args
 }
 
 func generatePod(cwd string, env []string, args []string) *corev1.Pod {

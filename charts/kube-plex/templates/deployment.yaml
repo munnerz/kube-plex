@@ -93,6 +93,14 @@ spec:
         # TODO: move this to a secret?
         - name: PLEX_CLAIM
           value: "{{ .Values.claimToken }}"
+        {{- if .Values.plexUser }}
+        - name: PLEX_UID
+          value: "{{ .Values.plexUser }}"
+        {{ end }}
+        {{- if .Values.plexGroup}}
+        - name: PLEX_GID
+          value: "{{ .Values.plexGroup }}"
+        {{ end }}
         # kube-plex env vars
         - name: PMS_INTERNAL_ADDRESS
           value: http://{{ template "fullname" . }}:32400
