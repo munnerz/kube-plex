@@ -1,5 +1,3 @@
-[![Codefresh build status]( https://g.codefresh.io/api/badges/pipeline/todaywasawesome/Atomic%20Cluster%2FPlex-kube?key=eyJhbGciOiJIUzI1NiJ9.NTgxYjcxMzk4MDM4OWEwMTAwZDFlNzkw.u79dSG8wLg7iLl47YDrhp31p_1ZnJv6HwJ198otYd7k&type=cf-1)]( https%3A%2F%2Fg.codefresh.io%2Fpipelines%2FPlex-kube%2Fbuilds%3Ffilter%3Dtrigger%3Abuild~Build%3Bpipeline%3A5e913ece618642555e116db3~Plex-kube)
-
 # kube-plex
 
 kube-plex is a scalable Plex Media Server solution for Kubernetes. It
