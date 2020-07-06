@@ -19,7 +19,7 @@ claimToken: ""
 # Set the timezone of the plex server
 timezone: Europe/London
 
-service:
+serviceTCP:
   type: ClusterIP
   port: 32400
   ## Specify the nodePort value for the LoadBalancer and NodePort service types.
@@ -30,7 +30,8 @@ service:
   ## set the LoadBalancer service type to internal only.
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
   ##
-  annotations: {}
+  annotations:
+    metallb.universe.tf/allow-shared-ip: plex-svc
   labels: {}
   ## Use loadBalancerIP to request a specific static IP,
   ## otherwise leave blank
@@ -39,6 +40,27 @@ service:
   # loadBalancerSourceRanges: []
   ## Set the externalTrafficPolicy in the Service to either Cluster or Local
   # externalTrafficPolicy: Cluster
+
+serviceUDP:
+
+    ## Specify the nodePort value for the LoadBalancer and NodePort service types.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    ##
+    # nodePort:
+    ## Provide any additional annotations which may be required. This can be used to
+    ## set the LoadBalancer service type to internal only.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+    ##
+    annotations:
+      metallb.universe.tf/allow-shared-ip: plex-svc
+    labels: {}
+    ## Use loadBalancerIP to request a specific static IP,
+    ## otherwise leave blank
+    ##
+    loadBalancerIP:
+    # loadBalancerSourceRanges: []
+    ## Set the externalTrafficPolicy in the Service to either Cluster or Local
+    # externalTrafficPolicy: Cluster
 
 ingress:
   enabled: false
@@ -96,7 +118,7 @@ persistence:
     accessMode: ReadWriteMany
   extraData: []
     # Optionally specifify additional Data mounts.  These will be mounted as
-    # /data-${name}.  This should be in the same format as the above 'data', 
+    # /data-${name}.  This should be in the same format as the above 'data',
     # with the additional field 'name'
     # - claimName: "special-tv"
     #   name: 'foo'
@@ -133,7 +155,7 @@ podAnnotations: {}
 
 deploymentAnnotations: {}
 
-proxy: 
+proxy:
   # This allows to set a proxy environment variable, which PMS uses to fetch the token and assets like movie cover
   enable: false
   # http: "http://proxy:8080"
