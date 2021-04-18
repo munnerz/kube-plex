@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -35,6 +36,8 @@ func main() {
 	env := os.Environ()
 	args := os.Args
 
+	ctx := context.Background()
+
 	rewriteEnv(env)
 	rewriteArgs(args)
 	cwd, err := os.Getwd()
@@ -53,7 +56,7 @@ func main() {
 		log.Fatalf("Error building kubernetes clientset: %s", err)
 	}
 
-	pod, err = kubeClient.CoreV1().Pods(namespace).Create(pod)
+	pod, err = kubeClient.CoreV1().Pods(namespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {
 		log.Fatalf("Error creating pod: %s", err)
 	}
@@ -62,7 +65,7 @@ func main() {
 	waitFn := func() <-chan error {
 		stopCh := make(chan error)
 		go func() {
-			stopCh <- waitForPodCompletion(kubeClient, pod)
+			stopCh <- waitForPodCompletion(ctx, kubeClient, pod)
 		}()
 		return stopCh
 	}
@@ -77,7 +80,7 @@ func main() {
 	}
 
 	log.Printf("Cleaning up pod...")
-	err = kubeClient.CoreV1().Pods(namespace).Delete(pod.Name, nil)
+	err = kubeClient.CoreV1().Pods(namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 	if err != nil {
 		log.Fatalf("Error cleaning up pod: %s", err)
 	}
@@ -177,9 +180,9 @@ func toCoreV1EnvVar(in []string) []corev1.EnvVar {
 	return out
 }
 
-func waitForPodCompletion(cl kubernetes.Interface, pod *corev1.Pod) error {
+func waitForPodCompletion(ctx context.Context, cl kubernetes.Interface, pod *corev1.Pod) error {
 	for {
-		pod, err := cl.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
+		pod, err := cl.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
