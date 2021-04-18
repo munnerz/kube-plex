@@ -127,11 +127,6 @@ func generatePod(cwd string, env []string, args []string) *corev1.Pod {
 							ReadOnly:  true,
 						},
 						{
-							Name:      "config",
-							MountPath: "/config",
-							ReadOnly:  true,
-						},
-						{
 							Name:      "transcode",
 							MountPath: "/transcode",
 						},
@@ -144,14 +139,6 @@ func generatePod(cwd string, env []string, args []string) *corev1.Pod {
 					VolumeSource: corev1.VolumeSource{
 						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 							ClaimName: dataPVC,
-						},
-					},
-				},
-				{
-					Name: "config",
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: configPVC,
 						},
 					},
 				},
