@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -12,7 +12,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog/v2"
 )
 
 // data pvc name
@@ -42,23 +44,31 @@ func main() {
 	rewriteArgs(args)
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("Error getting working directory: %s", err)
+		klog.Exitf("Error getting working directory: %s", err)
 	}
 	pod := generatePod(cwd, env, args)
 
-	cfg, err := clientcmd.BuildConfigFromFlags("", "")
+	cfg, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("Error building kubeconfig: %s", err)
+		// fallback to local config for development
+		kubeconfig := filepath.Join("~", ".kube", "config")
+		if ke := os.Getenv("KUBECONFIG"); len(ke) > 0 {
+			kubeconfig = ke
+		}
+		cfg, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			klog.Exitf("Error building kubeconfig: %s", err)
+		}
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		log.Fatalf("Error building kubernetes clientset: %s", err)
+		klog.Exitf("Error building kubernetes clientset: %s", err)
 	}
 
 	pod, err = kubeClient.CoreV1().Pods(namespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {
-		log.Fatalf("Error creating pod: %s", err)
+		klog.Exitf("Error creating pod: %s", err)
 	}
 
 	stopCh := signals.SetupSignalHandler()
@@ -73,16 +83,16 @@ func main() {
 	select {
 	case err := <-waitFn():
 		if err != nil {
-			log.Printf("Error waiting for pod to complete: %s", err)
+			klog.Infof("Error waiting for pod to complete: %s", err)
 		}
 	case <-stopCh:
-		log.Printf("Exit requested.")
+		klog.Infof("Exit requested.")
 	}
 
-	log.Printf("Cleaning up pod...")
+	klog.Infof("Cleaning up pod...")
 	err = kubeClient.CoreV1().Pods(namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 	if err != nil {
-		log.Fatalf("Error cleaning up pod: %s", err)
+		klog.Exitf("Error cleaning up pod: %s", err)
 	}
 }
 
@@ -178,7 +188,7 @@ func waitForPodCompletion(ctx context.Context, cl kubernetes.Interface, pod *cor
 		case corev1.PodPending:
 		case corev1.PodRunning:
 		case corev1.PodUnknown:
-			log.Printf("Warning: pod %q is in an unknown state", pod.Name)
+			klog.Warningf("pod %q is in an unknown state", pod.Name)
 		case corev1.PodFailed:
 			return fmt.Errorf("pod %q failed", pod.Name)
 		case corev1.PodSucceeded:
