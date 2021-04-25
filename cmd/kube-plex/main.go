@@ -22,12 +22,8 @@ var configPVC = os.Getenv("CONFIG_PVC")
 // transcode pvc name
 var transcodePVC = os.Getenv("TRANSCODE_PVC")
 
-// pms namespace
-var namespace = os.Getenv("KUBE_NAMESPACE")
-
 // image for the plexmediaserver container containing the transcoder. This
 // should be set to the same as the 'master' pms server
-var pmsImage = os.Getenv("PMS_IMAGE")
 var pmsInternalAddress = os.Getenv("PMS_INTERNAL_ADDRESS")
 
 func main() {
@@ -35,13 +31,6 @@ func main() {
 	args := os.Args
 
 	ctx := context.Background()
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		klog.Exitf("Error getting working directory: %s", err)
-	}
-	r := rewriter{pmsInternalAddress: pmsInternalAddress}
-	job := generateJob(cwd, r.Env(env), r.Args(args))
 
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
@@ -57,11 +46,31 @@ func main() {
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
+
 	if err != nil {
 		klog.Exitf("Error building kubernetes clientset: %s", err)
 	}
+	m, err := getMetadata(os.DirFS("/pod-info"))
+	if err != nil {
+		klog.Exitf("Failed to read Plex Mediaserver metadata: %v", err)
+	}
 
-	job, err = kubeClient.BatchV1().Jobs(namespace).Create(ctx, job, metav1.CreateOptions{})
+	err = m.FetchAPI(ctx, kubeClient)
+	if err != nil {
+		klog.Exitf("Error when fetching PMS pod metadata")
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		klog.Exitf("Error getting working directory: %s", err)
+	}
+	r := rewriter{pmsInternalAddress: pmsInternalAddress}
+	job, err := generateJob(cwd, m, r.Env(env), r.Args(args))
+	if err != nil {
+		klog.Exitf("Error while generating Job: %v", err)
+	}
+
+	job, err = kubeClient.BatchV1().Jobs(job.Namespace).Create(ctx, job, metav1.CreateOptions{})
 	if err != nil {
 		klog.Exitf("Error creating pod: %s", err)
 	}
@@ -85,7 +94,7 @@ func main() {
 	}
 
 	klog.Infof("Cleaning up pod...")
-	err = kubeClient.BatchV1().Jobs(namespace).Delete(ctx, job.Name, metav1.DeleteOptions{})
+	err = kubeClient.BatchV1().Jobs(job.Namespace).Delete(ctx, job.Name, metav1.DeleteOptions{})
 	if err != nil {
 		klog.Exitf("Error cleaning up pod: %s", err)
 	}

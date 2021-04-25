@@ -14,15 +14,22 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func generateJob(cwd string, env []string, args []string) *batch.Job {
+func generateJob(cwd string, m pmsMetadata, env []string, args []string) (*batch.Job, error) {
 	envVars := toCoreV1EnvVar(env)
 	var ttl, backoff int32
 	ttl = int32((24 * time.Hour).Seconds())
 	backoff = 1
+	ownerRef, err := m.OwnerReference()
+	if err != nil {
+		return &batch.Job{}, fmt.Errorf("error generating owner reference: %v", err)
+	}
+
 	return &batch.Job{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "pms-elastic-transcoder-",
+			GenerateName:    "pms-elastic-transcoder-",
+			Namespace:       m.Namespace,
+			OwnerReferences: []metav1.OwnerReference{ownerRef},
 		},
 		Spec: batch.JobSpec{
 			BackoffLimit:            &backoff,
@@ -37,7 +44,7 @@ func generateJob(cwd string, env []string, args []string) *batch.Job {
 						{
 							Name:       "plex",
 							Command:    args,
-							Image:      pmsImage,
+							Image:      m.PMSImage,
 							Env:        envVars,
 							WorkingDir: cwd,
 							VolumeMounts: []corev1.VolumeMount{
@@ -67,7 +74,7 @@ func generateJob(cwd string, env []string, args []string) *batch.Job {
 				},
 			},
 		},
-	}
+	}, nil
 }
 
 func toCoreV1EnvVar(in []string) []corev1.EnvVar {
