@@ -41,13 +41,12 @@ func main() {
 
 	ctx := context.Background()
 
-	rewriteEnv(env)
-	rewriteArgs(args)
 	cwd, err := os.Getwd()
 	if err != nil {
 		klog.Exitf("Error getting working directory: %s", err)
 	}
-	job := generateJob(cwd, env, args)
+	r := rewriter{pmsInternalAddress: pmsInternalAddress}
+	job := generateJob(cwd, r.Env(env), r.Args(args))
 
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
@@ -97,20 +96,28 @@ func main() {
 	}
 }
 
-// rewriteEnv rewrites environment variables to be passed to the transcoder
-func rewriteEnv(in []string) {
-	// no changes needed
+type rewriter struct {
+	pmsInternalAddress string
 }
 
-func rewriteArgs(in []string) {
-	for i, v := range in {
+// rewriteEnv rewrites environment variables to be passed to the transcoder
+func (r rewriter) Env(in []string) []string {
+	return in
+}
+
+// Args rewrites argument list to use kube-plex specific values
+func (r rewriter) Args(args []string) []string {
+	out := make([]string, len(args))
+	copy(out, args)
+	for i, v := range args {
 		switch v {
 		case "-progressurl", "-manifest_name", "-segment_list":
-			in[i+1] = strings.Replace(in[i+1], "http://127.0.0.1:32400", pmsInternalAddress, 1)
+			out[i+1] = strings.Replace(out[i+1], "http://127.0.0.1:32400", r.pmsInternalAddress, 1)
 		case "-loglevel", "-loglevel_plex":
-			in[i+1] = "debug"
+			out[i+1] = "debug"
 		}
 	}
+	return out
 }
 
 func generateJob(cwd string, env []string, args []string) *batch.Job {
