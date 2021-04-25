@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
+	batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func Test_rewriter_Args(t *testing.T) {
@@ -54,6 +58,28 @@ func Test_toCoreV1EnvVar(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := toCoreV1EnvVar(tt.args); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("toCoreV1EnvVar() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_waitForPodCompletion(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tests := []struct {
+		name    string
+		job     *batch.Job
+		wantErr bool
+	}{
+		{"successful run", &batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job", Namespace: "plex"}, Status: batch.JobStatus{Succeeded: 1}}, false},
+		{"failed job", &batch.Job{ObjectMeta: metav1.ObjectMeta{Name: "job", Namespace: "plex"}, Status: batch.JobStatus{Failed: 1}}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := fake.NewSimpleClientset(tt.job)
+			if err := waitForPodCompletion(ctx, cl, tt.job); (err != nil) != tt.wantErr {
+				t.Errorf("waitForPodCompletion() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
