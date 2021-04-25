@@ -12,6 +12,7 @@ import (
 	batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -189,18 +190,55 @@ func toCoreV1EnvVar(in []string) []corev1.EnvVar {
 }
 
 func waitForPodCompletion(ctx context.Context, cl kubernetes.Interface, job *batch.Job) error {
-	for {
-		job, err := cl.BatchV1().Jobs(job.Namespace).Get(ctx, job.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		switch {
-		case job.Status.Failed > 0:
-			return fmt.Errorf("pod %q failed", job.Name)
-		case job.Status.Succeeded > 0:
-			return nil
-		}
-		time.Sleep(1 * time.Second)
+	w, err := cl.BatchV1().Jobs(job.Namespace).Watch(ctx, metav1.SingleObject(job.ObjectMeta))
+	if err != nil {
+		return fmt.Errorf("failed to watch job: %v", err)
 	}
+	defer w.Stop()
+
+	// Check job state once before starting wait
+	j, err := cl.BatchV1().Jobs(job.Namespace).Get(ctx, job.Name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to fetch job information for checking: %v", err)
+	}
+
+	if done, err := jobDone(j); done {
+		return err
+	}
+
+	return podWatcher(ctx, w)
+}
+
+func podWatcher(ctx context.Context, w watch.Interface) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context cancelled: %v", ctx.Err())
+		case r := <-w.ResultChan():
+			switch r.Type {
+			case watch.Added:
+			case watch.Modified:
+				j := r.Object.(*batch.Job)
+
+				klog.V(2).Info("received an update for %s", j.Name)
+				if done, err := jobDone(j); done {
+					return err
+				}
+			case watch.Deleted:
+				j := r.Object.(*batch.Job)
+				klog.Error("Job %s deleted while waiting for it to complete!", j.Name)
+				return fmt.Errorf("job %s deleted unexpectedly", j.Name)
+			}
+		}
+	}
+}
+
+func jobDone(job *batch.Job) (bool, error) {
+	switch {
+	case job.Status.Failed > 0:
+		return true, fmt.Errorf("job %q failed", job.Name)
+	case job.Status.Succeeded > 0:
+		return true, nil
+	}
+	return false, nil
 }

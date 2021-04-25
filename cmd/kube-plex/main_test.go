@@ -84,3 +84,115 @@ func Test_waitForPodCompletion(t *testing.T) {
 		})
 	}
 }
+
+func Test_jobDone(t *testing.T) {
+	tests := []struct {
+		name    string
+		job     *batch.Job
+		want    bool
+		wantErr bool
+	}{
+		{"incomplete job", &batch.Job{Status: batch.JobStatus{Active: 1}}, false, false},
+		{"successful job", &batch.Job{Status: batch.JobStatus{Succeeded: 1}}, true, false},
+		{"failed job", &batch.Job{Status: batch.JobStatus{Failed: 1}}, true, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := jobDone(tt.job)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("jobDone() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("jobDone() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_podWatcher(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tests := []struct {
+		name    string
+		status  []batch.JobStatus
+		wantErr bool
+	}{
+		{"running to success", []batch.JobStatus{{Active: 1}, {Active: 0, Succeeded: 1}}, false},
+		{"running to failure", []batch.JobStatus{{Active: 1}, {Active: 0, Failed: 1}}, true},
+		{"long running to success", []batch.JobStatus{{Active: 1}, {Active: 1}, {Active: 0, Succeeded: 1}}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			job := &batch.Job{
+				ObjectMeta: metav1.ObjectMeta{Name: "testjob", Namespace: "test"},
+			}
+
+			cl := fake.NewSimpleClientset(job)
+			w, err := cl.BatchV1().Jobs(job.Namespace).Watch(ctx, metav1.SingleObject(job.ObjectMeta))
+
+			done := make(chan bool)
+			go func() {
+				err = podWatcher(ctx, w)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("podWatcher() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				done <- true
+			}()
+
+			for _, s := range tt.status {
+				job.Status = s
+				cl.BatchV1().Jobs(job.Namespace).UpdateStatus(ctx, job, metav1.UpdateOptions{})
+			}
+
+			<-done
+		})
+	}
+
+	t.Run("job deletion", func(t *testing.T) {
+		job := &batch.Job{
+			ObjectMeta: metav1.ObjectMeta{Name: "testjob", Namespace: "test"},
+		}
+
+		cl := fake.NewSimpleClientset(job)
+		w, err := cl.BatchV1().Jobs(job.Namespace).Watch(ctx, metav1.SingleObject(job.ObjectMeta))
+
+		done := make(chan bool)
+		go func() {
+			err = podWatcher(ctx, w)
+			if err == nil {
+				t.Errorf("podWatcher() returned success, expected error")
+			}
+			done <- true
+		}()
+
+		cl.BatchV1().Jobs(job.Namespace).Delete(ctx, job.Name, metav1.DeleteOptions{})
+		<-done
+	})
+
+	t.Run("termination from context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		job := &batch.Job{
+			ObjectMeta: metav1.ObjectMeta{Name: "testjob", Namespace: "test"},
+		}
+
+		cl := fake.NewSimpleClientset(job)
+		w, err := cl.BatchV1().Jobs(job.Namespace).Watch(ctx, metav1.SingleObject(job.ObjectMeta))
+
+		done := make(chan bool)
+		go func() {
+			err = podWatcher(ctx, w)
+			if err == nil {
+				t.Errorf("podWatcher() returned success, expected error")
+			}
+			done <- true
+		}()
+
+		cancel()
+		<-done
+	})
+
+}
