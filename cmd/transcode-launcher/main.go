@@ -44,13 +44,15 @@ func main() {
 	go func() { srvErr <- s.ListenAndServe() }()
 
 	a := flag.Args()
+	klog.Infof("Transcode requested with command: %v", a)
 	cmd := exec.Command(a[0], a[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	cmdErr := make(chan error)
 	go func() {
-		klog.Info("Transcode output begins:")
+		klog.Info("Transcode output begins...")
+		klog.Info("--------------------------------------------")
 		cmdErr <- cmd.Run()
 	}()
 
