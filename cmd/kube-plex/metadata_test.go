@@ -69,7 +69,7 @@ func Test_pmsMetadata_OwnerReference(t *testing.T) {
 		want    v1.OwnerReference
 		wantErr bool
 	}{
-		{"success", pmsMetadata{Name: "testpod", Namespace: "plex", Uuid: "123"}, v1.OwnerReference{Kind: "Pod", Name: "testpod", UID: "123"}, false},
+		{"success", pmsMetadata{Name: "testpod", Namespace: "plex", Uuid: "123"}, v1.OwnerReference{APIVersion: "v1", Kind: "Pod", Name: "testpod", UID: "123"}, false},
 		{"missing uuid", pmsMetadata{Name: "testpod", Namespace: "plex"}, v1.OwnerReference{}, true},
 	}
 	for _, tt := range tests {

@@ -39,7 +39,7 @@ func main() {
 
 	m, err := FetchMetadata(ctx, kubeClient, podName, podNamespace)
 	if err != nil {
-		klog.Exitf("Error when fetching PMS pod metadata")
+		klog.Exitf("Error when fetching PMS pod metadata: %v", err)
 	}
 
 	cwd, err := os.Getwd()

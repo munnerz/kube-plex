@@ -215,7 +215,7 @@ func Test_generateJob(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName:    "pms-elastic-transcoder-",
 			Namespace:       "plex",
-			OwnerReferences: []metav1.OwnerReference{{UID: "abc123", Name: "pms", Kind: "Pod"}},
+			OwnerReferences: []metav1.OwnerReference{{APIVersion: "v1", UID: "abc123", Name: "pms", Kind: "Pod"}},
 		},
 		Spec: batch.JobSpec{
 			BackoffLimit:            &backoff,

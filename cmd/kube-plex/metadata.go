@@ -108,9 +108,10 @@ func (p pmsMetadata) OwnerReference() (v1.OwnerReference, error) {
 	}
 
 	return v1.OwnerReference{
-		Kind: "Pod",
-		Name: p.Name,
-		UID:  p.Uuid,
+		APIVersion: "v1",
+		Kind:       "Pod",
+		Name:       p.Name,
+		UID:        p.Uuid,
 	}, nil
 }
 
