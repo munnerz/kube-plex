@@ -18,6 +18,7 @@ import (
 var pmsInternalAddress = os.Getenv("PMS_INTERNAL_ADDRESS")
 
 func main() {
+
 	env := os.Environ()
 	args := os.Args
 
@@ -37,16 +38,14 @@ func main() {
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
-
 	if err != nil {
 		klog.Exitf("Error building kubernetes clientset: %s", err)
 	}
-	m, err := getMetadata(os.DirFS("/pod-info"))
-	if err != nil {
-		klog.Exitf("Failed to read Plex Mediaserver metadata: %v", err)
-	}
 
-	err = m.FetchAPI(ctx, kubeClient)
+	podName := os.Getenv("POD_NAME")
+	podNamespace := os.Getenv("POD_NAMESPACE")
+
+	m, err := FetchMetadata(ctx, kubeClient, podName, podNamespace)
 	if err != nil {
 		klog.Exitf("Error when fetching PMS pod metadata")
 	}

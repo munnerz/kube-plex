@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"io/fs"
 	"reflect"
 	"testing"
-	"testing/fstest"
 
 	"github.com/go-test/deep"
 	corev1 "k8s.io/api/core/v1"
@@ -13,74 +11,50 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func Test_getMetadata(t *testing.T) {
-	tests := []struct {
-		name    string
-		fs      fs.FS
-		want    pmsMetadata
-		wantErr bool
-	}{
-		{"reads pms metadata",
-			fstest.MapFS{"podname": {Data: []byte("testpod")}, "namespace": {Data: []byte("plex")}},
-			pmsMetadata{Name: "testpod", Namespace: "plex"}, false},
-		{"handles missing namespace data",
-			fstest.MapFS{"podname": {Data: []byte("testpod")}}, pmsMetadata{}, true},
-		{"handles empty namespace data",
-			fstest.MapFS{"namespace": {}, "podname": {Data: []byte("testpod")}}, pmsMetadata{}, true},
-		{"handles missing uuid data",
-			fstest.MapFS{"namespace": {Data: []byte("plex")}}, pmsMetadata{}, true},
-		{"handles empty uuid data",
-			fstest.MapFS{"podname": {}, "namespace": {Data: []byte("plex")}}, pmsMetadata{}, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getMetadata(tt.fs)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getMetadata() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getMetadata() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_pmsMetadata_FetchAPI(t *testing.T) {
+func Test_pmsMetadata_FetchMetadata(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	validPod := corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123"},
+		ObjectMeta: v1.ObjectMeta{
+			Namespace: "plex", Name: "pms", UID: "123",
+			Annotations: map[string]string{"kube-plex/pms-url": "http://service:32400/", "kube-plex/image": "kubeplex:latest"},
+		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{Name: "plex", Image: "plex:test"}},
 			Volumes:    []corev1.Volume{{Name: "data"}, {Name: "transcode"}},
 		},
 	}
-	rawPms := pmsMetadata{Name: "pms", Namespace: "plex"}
 
 	tests := []struct {
-		name    string
-		pod     corev1.Pod
-		havePms pmsMetadata
-		wantPms pmsMetadata
-		wantErr bool
+		name         string
+		podname      string
+		podnamespace string
+		pod          corev1.Pod
+		wantPms      pmsMetadata
+		wantErr      bool
 	}{
-		{"fetches info from api", validPod, rawPms, pmsMetadata{Name: "pms", Namespace: "plex", Uuid: "123", PMSImage: "plex:test", Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}, false},
-		{"plex container missing", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "wrong", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}}, rawPms, rawPms, true},
-		{"plex data volume missing", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "transcode"}}}}, rawPms, rawPms, true},
-		{"plex transcode volume missing", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "data"}}}}, rawPms, rawPms, true},
+		{"fetches info from api", "pms", "plex", validPod, pmsMetadata{Name: "pms", Namespace: "plex", Uuid: "123", PmsImage: "plex:test", KubePlexImage: "kubeplex:latest", PmsURL: "http://service:32400/", Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}, false},
+		{"fails on missing podname", "", "plex", validPod, pmsMetadata{}, true},
+		{"fails on missing namespace", "pms", "", validPod, pmsMetadata{}, true},
+		{"fails gracefully on wrong pod name", "wrong", "plex", validPod, pmsMetadata{}, true},
+		{"fails gracefully on wrong namespace", "pms", "wrong", validPod, pmsMetadata{}, true},
+		{"plex container missing", "pms", "plex", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "wrong", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}}, pmsMetadata{}, true},
+		{"plex data volume missing", "pms", "plex", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "transcode"}}}}, pmsMetadata{}, true},
+		{"plex transcode volume missing", "pms", "plex", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "data"}}}}, pmsMetadata{}, true},
+		{"plex service annotation missing", "pms", "plex", corev1.Pod{ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/image": "kp:latest"}}, Spec: validPod.Spec}, pmsMetadata{}, true},
+		{"kube-plex image annotation missing", "pms", "plex", corev1.Pod{ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/pms-url": "http://p/"}}, Spec: validPod.Spec}, pmsMetadata{}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := tt.havePms
 			cl := fake.NewSimpleClientset(&tt.pod)
-			if err := p.FetchAPI(ctx, cl); (err != nil) != tt.wantErr {
+			m, err := FetchMetadata(ctx, cl, tt.podname, tt.podnamespace)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("pmsMetadata.FetchAPI() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			// We don't want to check output state if error occurs
 			if !tt.wantErr {
-				if diff := deep.Equal(p, tt.wantPms); diff != nil {
+				if diff := deep.Equal(m, tt.wantPms); diff != nil {
 					t.Errorf("pmsMetadata.FetchAPI() diff: %v", diff)
 				}
 			}

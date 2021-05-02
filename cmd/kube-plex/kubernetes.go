@@ -43,17 +43,27 @@ func generateJob(cwd string, m pmsMetadata, env []string, args []string) (*batch
 					Containers: []corev1.Container{
 						{
 							Name:       "plex",
-							Command:    args,
-							Image:      m.PMSImage,
+							Command:    m.LauncherCmd(args...),
+							Image:      m.PmsImage,
 							Env:        envVars,
 							WorkingDir: cwd,
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "data", MountPath: "/data", ReadOnly: true},
 								{Name: "transcode", MountPath: "/transcode"},
+								{Name: "shared", MountPath: "/shared", ReadOnly: true},
 							},
 						},
 					},
-					Volumes: m.Volumes,
+					InitContainers: []corev1.Container{{
+						Name:         "transcoder-launcher",
+						Image:        m.KubePlexImage,
+						Command:      []string{"cp", "/transcode-launcher", "/shared/transcode-launcher"},
+						VolumeMounts: []corev1.VolumeMount{{Name: "shared", MountPath: "/shared", ReadOnly: false}},
+					}},
+					Volumes: append(
+						[]corev1.Volume{{Name: "shared", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
+						m.Volumes...,
+					),
 				},
 			},
 		},

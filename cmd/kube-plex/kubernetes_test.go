@@ -168,10 +168,12 @@ func Test_podWatcher(t *testing.T) {
 
 func Test_generateJob(t *testing.T) {
 	md := pmsMetadata{
-		Name:      "pms",
-		Namespace: "plex",
-		Uuid:      "abc123",
-		PMSImage:  "pms:latest",
+		Name:          "pms",
+		Namespace:     "plex",
+		Uuid:          "abc123",
+		PmsImage:      "pms:latest",
+		PmsURL:        "http://kubeplex:32400/",
+		KubePlexImage: "kubeplex:latest",
 		Volumes: []corev1.Volume{
 			{Name: "data", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "datapvc"}}},
 			{Name: "transcode", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "transcodepvc"}}},
@@ -198,11 +200,17 @@ func Test_generateJob(t *testing.T) {
 			TTLSecondsAfterFinished: &ttl,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
+					InitContainers: []corev1.Container{{
+						Name:         "transcoder-launcher",
+						Image:        "kubeplex:latest",
+						Command:      []string{"cp", "/transcode-launcher", "/shared/transcode-launcher"},
+						VolumeMounts: []corev1.VolumeMount{{Name: "shared", MountPath: "/shared", ReadOnly: false}},
+					}},
 					NodeSelector:  map[string]string{"beta.kubernetes.io/arch": "amd64"},
 					RestartPolicy: corev1.RestartPolicyNever,
 					Containers: []corev1.Container{{
 						Name:    "plex",
-						Command: []string{"a", "b", "c"},
+						Command: []string{"/shared/transcode-launcher", "--pms-url=http://kubeplex:32400/", "--port=32400", "--", "a", "b", "c"},
 						Image:   "pms:latest",
 						Env: []corev1.EnvVar{
 							{Name: "FOO", Value: "bar"},
@@ -212,9 +220,11 @@ func Test_generateJob(t *testing.T) {
 						VolumeMounts: []corev1.VolumeMount{
 							{Name: "data", MountPath: "/data", ReadOnly: true},
 							{Name: "transcode", MountPath: "/transcode", ReadOnly: false},
+							{Name: "shared", MountPath: "/shared", ReadOnly: true},
 						},
 					}},
 					Volumes: []corev1.Volume{
+						{Name: "shared", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
 						{Name: "data", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "datapvc"}}},
 						{Name: "transcode", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "transcodepvc"}}},
 					},
