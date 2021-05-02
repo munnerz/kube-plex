@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -18,6 +19,7 @@ type pmsMetadata struct {
 	// Fields fetched from kubernetes API
 	Uuid     types.UID
 	PMSImage string
+	Volumes  []corev1.Volume
 }
 
 func getMetadata(m fs.FS) (pmsMetadata, error) {
@@ -27,7 +29,7 @@ func getMetadata(m fs.FS) (pmsMetadata, error) {
 	}
 
 	if len(name) == 0 {
-		return pmsMetadata{}, fmt.Errorf("Pod name is empty")
+		return pmsMetadata{}, fmt.Errorf("pod name is empty")
 	}
 
 	ns, err := fs.ReadFile(m, "namespace")
@@ -36,7 +38,7 @@ func getMetadata(m fs.FS) (pmsMetadata, error) {
 	}
 
 	if len(ns) == 0 {
-		return pmsMetadata{}, fmt.Errorf("Namespace is empty")
+		return pmsMetadata{}, fmt.Errorf("namespace is empty")
 	}
 
 	return pmsMetadata{
@@ -61,10 +63,33 @@ func (p *pmsMetadata) FetchAPI(ctx context.Context, cl kubernetes.Interface) err
 	}
 
 	if p.PMSImage == "" {
-		return fmt.Errorf("Could not find Plex container image, is there a container named `plex`?")
+		return fmt.Errorf("could not find Plex container image, is there a container named `plex`?")
 	}
 
+	// Fetch data volumes from pod spec
+	dv, err := getVolume(pod.Spec, "data")
+	if err != nil {
+		return fmt.Errorf("error when getting data volume: %v", err)
+	}
+
+	tv, err := getVolume(pod.Spec, "transcode")
+	if err != nil {
+		return fmt.Errorf("error when getting transcode volume: %v", err)
+	}
+
+	p.Volumes = []corev1.Volume{dv, tv}
+
 	return nil
+}
+
+// getVolume returns a volume matching given name from podspec
+func getVolume(podspec corev1.PodSpec, name string) (corev1.Volume, error) {
+	for _, v := range podspec.Volumes {
+		if v.Name == name {
+			return v, nil
+		}
+	}
+	return corev1.Volume{}, fmt.Errorf("volume %s not found", name)
 }
 
 func (p pmsMetadata) OwnerReference() (v1.OwnerReference, error) {

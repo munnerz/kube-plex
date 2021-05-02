@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-test/deep"
 	batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -163,4 +164,65 @@ func Test_podWatcher(t *testing.T) {
 		<-done
 	})
 
+}
+
+func Test_generateJob(t *testing.T) {
+	md := pmsMetadata{
+		Name:      "pms",
+		Namespace: "plex",
+		Uuid:      "abc123",
+		PMSImage:  "pms:latest",
+		Volumes: []corev1.Volume{
+			{Name: "data", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "datapvc"}}},
+			{Name: "transcode", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "transcodepvc"}}},
+		},
+	}
+	e := []string{"FOO=bar", "BAR=oof"}
+	a := []string{"a", "b", "c"}
+	cwd := "/rundir"
+	got, err := generateJob(cwd, md, e, a)
+	if err != nil {
+		t.Fatalf("generateJob() returned error, err=%v", err)
+	}
+	var backoff int32 = 1
+	var ttl int32 = 86400
+	want := &batch.Job{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName:    "pms-elastic-transcoder-",
+			Namespace:       "plex",
+			OwnerReferences: []metav1.OwnerReference{{UID: "abc123", Name: "pms", Kind: "Pod"}},
+		},
+		Spec: batch.JobSpec{
+			BackoffLimit:            &backoff,
+			TTLSecondsAfterFinished: &ttl,
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					NodeSelector:  map[string]string{"beta.kubernetes.io/arch": "amd64"},
+					RestartPolicy: corev1.RestartPolicyNever,
+					Containers: []corev1.Container{{
+						Name:    "plex",
+						Command: []string{"a", "b", "c"},
+						Image:   "pms:latest",
+						Env: []corev1.EnvVar{
+							{Name: "FOO", Value: "bar"},
+							{Name: "BAR", Value: "oof"},
+						},
+						WorkingDir: "/rundir",
+						VolumeMounts: []corev1.VolumeMount{
+							{Name: "data", MountPath: "/data", ReadOnly: true},
+							{Name: "transcode", MountPath: "/transcode", ReadOnly: false},
+						},
+					}},
+					Volumes: []corev1.Volume{
+						{Name: "data", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "datapvc"}}},
+						{Name: "transcode", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "transcodepvc"}}},
+					},
+				},
+			},
+		},
+	}
+	if diff := deep.Equal(want, got); diff != nil {
+		t.Errorf("generateJob() output differs, diff: %v", diff)
+	}
 }

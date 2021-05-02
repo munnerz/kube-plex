@@ -94,32 +94,10 @@ spec:
         - name: PLEX_CLAIM
           value: "{{ .Values.claimToken }}"
         # kube-plex env vars
-        - name: PMS_INTERNAL_ADDRESS
-          value: http://{{ template "fullname" . }}:32400
-        - name: PMS_IMAGE
-          value: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         - name: KUBE_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: TRANSCODE_PVC
-{{- if .Values.persistence.transcode.claimName }}
-          value: "{{ .Values.persistence.transcode.claimName }}"
-{{- else }}
-          value: "{{ template "fullname" . }}-transcode"
-{{- end }}
-        - name: DATA_PVC
-{{- if .Values.persistence.data.claimName }}
-          value: "{{ .Values.persistence.data.claimName }}"
-{{- else }}
-          value: "{{ template "fullname" . }}-data"
-{{- end }}
-        - name: CONFIG_PVC
-{{- if .Values.persistence.config.claimName }}
-          value: "{{ .Values.persistence.config.claimName }}"
-{{- else }}
-          value: "{{ template "fullname" . }}-config"
-{{- end }}
 {{- if .Values.proxy.enable }}
   {{- if .Values.proxy.http }}
         - name: "HTTP_PROXY"

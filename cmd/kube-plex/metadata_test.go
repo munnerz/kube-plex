@@ -7,9 +7,9 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/go-test/deep"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -52,15 +52,13 @@ func Test_pmsMetadata_FetchAPI(t *testing.T) {
 
 	validPod := corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123"},
-		Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "plex:test"}}},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{Name: "plex", Image: "plex:test"}},
+			Volumes:    []corev1.Volume{{Name: "data"}, {Name: "transcode"}},
+		},
 	}
 	rawPms := pmsMetadata{Name: "pms", Namespace: "plex"}
 
-	type fields struct {
-		Name      string
-		Namespace string
-		Uuid      types.UID
-	}
 	tests := []struct {
 		name    string
 		pod     corev1.Pod
@@ -68,8 +66,10 @@ func Test_pmsMetadata_FetchAPI(t *testing.T) {
 		wantPms pmsMetadata
 		wantErr bool
 	}{
-		{"fetches info from api", validPod, rawPms, pmsMetadata{Name: "pms", Namespace: "plex", Uuid: "123", PMSImage: "plex:test"}, false},
-		{"plex container missing", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "wrong", Image: "pms:own"}}}}, rawPms, rawPms, true},
+		{"fetches info from api", validPod, rawPms, pmsMetadata{Name: "pms", Namespace: "plex", Uuid: "123", PMSImage: "plex:test", Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}, false},
+		{"plex container missing", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "wrong", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}}, rawPms, rawPms, true},
+		{"plex data volume missing", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "transcode"}}}}, rawPms, rawPms, true},
+		{"plex transcode volume missing", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "data"}}}}, rawPms, rawPms, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -79,8 +79,10 @@ func Test_pmsMetadata_FetchAPI(t *testing.T) {
 				t.Errorf("pmsMetadata.FetchAPI() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			// We don't want to check output state if error occurs
-			if !tt.wantErr && !reflect.DeepEqual(p, tt.wantPms) {
-				t.Errorf("pmsMetadata.FetchAPI() = %v, want %v", p, tt.wantPms)
+			if !tt.wantErr {
+				if diff := deep.Equal(p, tt.wantPms); diff != nil {
+					t.Errorf("pmsMetadata.FetchAPI() diff: %v", diff)
+				}
 			}
 		})
 	}

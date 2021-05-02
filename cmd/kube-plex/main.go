@@ -13,15 +13,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// data pvc name
-var dataPVC = os.Getenv("DATA_PVC")
-
-// config pvc name
-var configPVC = os.Getenv("CONFIG_PVC")
-
-// transcode pvc name
-var transcodePVC = os.Getenv("TRANSCODE_PVC")
-
 // image for the plexmediaserver container containing the transcoder. This
 // should be set to the same as the 'master' pms server
 var pmsInternalAddress = os.Getenv("PMS_INTERNAL_ADDRESS")

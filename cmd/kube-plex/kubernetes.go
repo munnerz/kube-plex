@@ -53,24 +53,7 @@ func generateJob(cwd string, m pmsMetadata, env []string, args []string) (*batch
 							},
 						},
 					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "data",
-							VolumeSource: corev1.VolumeSource{
-								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: dataPVC,
-								},
-							},
-						},
-						{
-							Name: "transcode",
-							VolumeSource: corev1.VolumeSource{
-								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: transcodePVC,
-								},
-							},
-						},
-					},
+					Volumes: m.Volumes,
 				},
 			},
 		},
