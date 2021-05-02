@@ -32,6 +32,28 @@ func Test_toCoreV1EnvVar(t *testing.T) {
 	}
 }
 
+func Test_filterPodEnv(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []corev1.EnvVar
+		want []corev1.EnvVar
+	}{
+		{"filters pod name", []corev1.EnvVar{{Name: "POD_NAME", Value: "pms"}, {Name: "SHELL", Value: "/bin/false"}}, []corev1.EnvVar{{Name: "SHELL", Value: "/bin/false"}}},
+		{"filters pod namespace", []corev1.EnvVar{{Name: "SHELL", Value: "/bin/false"}, {Name: "POD_NAMESPACE", Value: "pms"}}, []corev1.EnvVar{{Name: "SHELL", Value: "/bin/false"}}},
+		{"filters multiple elements", []corev1.EnvVar{{Name: "POD_NAME", Value: "pms"}, {Name: "SHELL", Value: "/bin/false"}, {Name: "POD_NAMESPACE", Value: "pms"}}, []corev1.EnvVar{{Name: "SHELL", Value: "/bin/false"}}},
+		{"nothing to filter", []corev1.EnvVar{{Name: "SHELL", Value: "/bin/false"}}, []corev1.EnvVar{{Name: "SHELL", Value: "/bin/false"}}},
+		{"empty vars", []corev1.EnvVar{}, []corev1.EnvVar{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := filterPodEnv(tt.in)
+			if diff := deep.Equal(got, tt.want); diff != nil {
+				t.Errorf("filterPodEnv() diff = %v", diff)
+			}
+		})
+	}
+}
+
 func Test_waitForPodCompletion(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

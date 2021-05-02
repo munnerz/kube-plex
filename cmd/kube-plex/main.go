@@ -13,15 +13,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// image for the plexmediaserver container containing the transcoder. This
-// should be set to the same as the 'master' pms server
-var pmsInternalAddress = os.Getenv("PMS_INTERNAL_ADDRESS")
-
 func main() {
-
-	env := os.Environ()
-	args := os.Args
-
 	ctx := context.Background()
 
 	cfg, err := rest.InClusterConfig()
@@ -54,8 +46,11 @@ func main() {
 	if err != nil {
 		klog.Exitf("Error getting working directory: %s", err)
 	}
-	r := rewriter{pmsInternalAddress: pmsInternalAddress}
-	job, err := generateJob(cwd, m, r.Env(env), r.Args(args))
+
+	env := os.Environ()
+	args := os.Args
+
+	job, err := generateJob(cwd, m, env, args)
 	if err != nil {
 		klog.Exitf("Error while generating Job: %v", err)
 	}

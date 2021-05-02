@@ -15,7 +15,7 @@ import (
 )
 
 func generateJob(cwd string, m pmsMetadata, env []string, args []string) (*batch.Job, error) {
-	envVars := toCoreV1EnvVar(env)
+	envVars := filterPodEnv(toCoreV1EnvVar(env))
 	var ttl, backoff int32
 	ttl = int32((24 * time.Hour).Seconds())
 	backoff = 1
@@ -77,6 +77,19 @@ func toCoreV1EnvVar(in []string) []corev1.EnvVar {
 		out[i] = corev1.EnvVar{
 			Name:  splitvar[0],
 			Value: splitvar[1],
+		}
+	}
+	return out
+}
+
+func filterPodEnv(in []corev1.EnvVar) []corev1.EnvVar {
+	out := []corev1.EnvVar{}
+	for _, v := range in {
+		switch v.Name {
+		case "POD_NAME":
+		case "POD_NAMESPACE":
+		default:
+			out = append(out, v)
 		}
 	}
 	return out
