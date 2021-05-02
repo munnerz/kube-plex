@@ -3,10 +3,7 @@ FROM golang:1.16 AS builder
 WORKDIR /go/src/app
 COPY . .
 
-ENV CGO_ENABLED=0
-
-RUN go build -o kube-plex main.go
-RUN go build ./cmd/...
+RUN CGO_ENABLED=0 go build -o ./ ./cmd/...
 
 FROM alpine:3.13
 
