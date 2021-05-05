@@ -43,6 +43,7 @@ func Test_filterPodEnv(t *testing.T) {
 		{"filters multiple elements", []corev1.EnvVar{{Name: "POD_NAME", Value: "pms"}, {Name: "SHELL", Value: "/bin/false"}, {Name: "POD_NAMESPACE", Value: "pms"}}, []corev1.EnvVar{{Name: "SHELL", Value: "/bin/false"}}},
 		{"nothing to filter", []corev1.EnvVar{{Name: "SHELL", Value: "/bin/false"}}, []corev1.EnvVar{{Name: "SHELL", Value: "/bin/false"}}},
 		{"empty vars", []corev1.EnvVar{}, []corev1.EnvVar{}},
+		{"filter FFmpeg escaping", []corev1.EnvVar{{Name: "FFMPEG_EXTERNAL_LIBS", Value: "/path\\ to/codec"}}, []corev1.EnvVar{{Name: "FFMPEG_EXTERNAL_LIBS", Value: "/path to/codec"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -192,7 +193,7 @@ func Test_generateJob(t *testing.T) {
 	md := pmsMetadata{
 		Name:          "pms",
 		Namespace:     "plex",
-		Uuid:          "abc123",
+		UID:           "abc123",
 		PmsImage:      "pms:latest",
 		PmsURL:        "http://kubeplex:32400/",
 		KubePlexImage: "kubeplex:latest",
@@ -240,9 +241,9 @@ func Test_generateJob(t *testing.T) {
 						},
 						WorkingDir: "/rundir",
 						VolumeMounts: []corev1.VolumeMount{
-							{Name: "data", MountPath: "/data", ReadOnly: true},
+							{Name: "data", MountPath: "/data", ReadOnly: false},
 							{Name: "transcode", MountPath: "/transcode", ReadOnly: false},
-							{Name: "shared", MountPath: "/shared", ReadOnly: true},
+							{Name: "shared", MountPath: "/shared", ReadOnly: false},
 						},
 					}},
 					Volumes: []corev1.Volume{

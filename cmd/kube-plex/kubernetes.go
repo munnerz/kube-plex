@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/munnerz/kube-plex/internal/ffmpeg"
 	batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,9 +49,9 @@ func generateJob(cwd string, m pmsMetadata, env []string, args []string) (*batch
 							Env:        envVars,
 							WorkingDir: cwd,
 							VolumeMounts: []corev1.VolumeMount{
-								{Name: "data", MountPath: "/data", ReadOnly: true},
+								{Name: "data", MountPath: "/data"},
 								{Name: "transcode", MountPath: "/transcode"},
-								{Name: "shared", MountPath: "/shared", ReadOnly: true},
+								{Name: "shared", MountPath: "/shared"},
 							},
 						},
 					},
@@ -88,6 +89,9 @@ func filterPodEnv(in []corev1.EnvVar) []corev1.EnvVar {
 		switch v.Name {
 		case "POD_NAME":
 		case "POD_NAMESPACE":
+		case "FFMPEG_EXTERNAL_LIBS":
+			v.Value = ffmpeg.Unescape(v.Value)
+			out = append(out, v)
 		default:
 			out = append(out, v)
 		}

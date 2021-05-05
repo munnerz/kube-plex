@@ -30,6 +30,9 @@ spec:
       annotations:
         kube-plex/pms-url: http://{{ template "fullname" . }}:32400
         kube-plex/image: "{{ .Values.kubePlex.image.repository }}:{{ .Values.kubePlex.image.tag }}"
+        {{- if .Values.kubePlex.loglevel }}
+        kube-plex/loglevel: "{{ .Values.kubePlex.loglevel }}"
+        {{- end }}
       {{- if .Values.podAnnotations }}
         {{- range $key, $value := .Values.podAnnotations }}
         {{ $key }}: {{ $value | quote }}

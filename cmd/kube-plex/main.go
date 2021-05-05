@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"net"
 	"os"
 	"path/filepath"
 
+	"github.com/munnerz/kube-plex/internal/ffmpeg"
 	"github.com/munnerz/kube-plex/pkg/signals"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -15,6 +17,23 @@ import (
 
 func main() {
 	ctx := context.Background()
+
+	codecPath := ffmpeg.Unescape(os.Getenv("FFMPEG_EXTERNAL_LIBS"))
+	var codecPort int
+	if codecPath != "" {
+		l, err := net.Listen("tcp", ":0")
+		if err != nil {
+			klog.Exitf("Failed to listen on any ports: %v", err)
+		}
+		codecPort = l.Addr().(*net.TCPAddr).Port
+		go func() {
+			err := startCodecServe(codecPath, l)
+			if err != nil {
+				klog.Errorf("Error from startCodecServe(): %v", err)
+			}
+		}()
+		klog.Infof("Codec server listening on port %d", codecPort)
+	}
 
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
@@ -31,7 +50,7 @@ func main() {
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		klog.Exitf("Error building kubernetes clientset: %s", err)
+		klog.Exitf("Error building Kubernetes clientset: %s", err)
 	}
 
 	podName := os.Getenv("POD_NAME")
@@ -40,6 +59,11 @@ func main() {
 	m, err := FetchMetadata(ctx, kubeClient, podName, podNamespace)
 	if err != nil {
 		klog.Exitf("Error when fetching PMS pod metadata: %v", err)
+	}
+
+	// Write codecPort to pmsMetadata
+	if codecPort != 0 {
+		m.CodecPort = codecPort
 	}
 
 	cwd, err := os.Getwd()
