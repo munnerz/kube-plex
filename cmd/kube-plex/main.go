@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/munnerz/kube-plex/internal/ffmpeg"
+	"github.com/munnerz/kube-plex/internal/logger"
 	"github.com/munnerz/kube-plex/pkg/signals"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -17,6 +18,7 @@ import (
 
 func main() {
 	ctx := context.Background()
+	klog.SetLogger(&logger.PlexLogger{})
 
 	codecPath := ffmpeg.Unescape(os.Getenv("FFMPEG_EXTERNAL_LIBS"))
 	var codecPort int
