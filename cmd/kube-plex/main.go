@@ -105,7 +105,8 @@ func main() {
 	}
 
 	klog.Infof("Cleaning up pod...")
-	err = kubeClient.BatchV1().Jobs(job.Namespace).Delete(ctx, job.Name, metav1.DeleteOptions{})
+	bg := metav1.DeletePropagationBackground
+	err = kubeClient.BatchV1().Jobs(job.Namespace).Delete(ctx, job.Name, metav1.DeleteOptions{PropagationPolicy: &bg})
 	if err != nil {
 		klog.Exitf("Error cleaning up pod: %s", err)
 	}
