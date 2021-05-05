@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	pmsUrl        = "kube-plex/pms-url"
+	pmsUrl        = "kube-plex/pms-addr"
 	kubePlexImage = "kube-plex/image"
 	kubePlexLevel = "kube-plex/loglevel"
 )
@@ -26,7 +26,7 @@ type pmsMetadata struct {
 	KubePlexLevel string          // loglevel of kubeplex processes
 	CodecPort     int             // port on which the codec service runs
 	PmsImage      string          // container image used by Plex Media Server
-	PmsURL        string          // URL for Plex Media Server
+	PmsAddr       string          // URL for Plex Media Server
 }
 
 func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace string) (pmsMetadata, error) {
@@ -81,7 +81,7 @@ func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace
 		return pmsMetadata{}, fmt.Errorf("unable to determine plex service URL")
 	}
 
-	m.PmsURL = u
+	m.PmsAddr = u
 
 	// Get kube-plex image
 	i, ok := a[kubePlexImage]
@@ -125,13 +125,13 @@ func (p pmsMetadata) OwnerReference() (v1.OwnerReference, error) {
 func (p pmsMetadata) LauncherCmd(args ...string) []string {
 	a := []string{
 		"/shared/transcode-launcher",
-		fmt.Sprintf("--pms-url=%s", p.PmsURL),
-		"--port=32400",
+		fmt.Sprintf("--pms-addr=%s", p.PmsAddr),
+		"--listen=:32400",
 	}
 	if p.CodecPort != 0 {
 		a = append(a,
 			fmt.Sprintf("--codec-server-url=http://%s:%d/", p.PodIP, p.CodecPort),
-			"--codec-dir=/shared/codecs",
+			"--codec-dir=/shared/codecs/",
 		)
 	}
 	if p.KubePlexLevel != "" {

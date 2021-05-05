@@ -28,7 +28,7 @@ spec:
         app: {{ template "name" . }}
         release: {{ .Release.Name }}
       annotations:
-        kube-plex/pms-url: http://{{ template "fullname" . }}:32400
+        kube-plex/pms-addr: {{ template "fullname" . }}:32400
         kube-plex/image: "{{ .Values.kubePlex.image.repository }}:{{ .Values.kubePlex.image.tag }}"
         {{- if .Values.kubePlex.loglevel }}
         kube-plex/loglevel: "{{ .Values.kubePlex.loglevel }}"

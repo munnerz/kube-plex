@@ -1,11 +1,8 @@
 package main
 
 import (
+	"context"
 	"flag"
-	"fmt"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"os/exec"
 
@@ -14,8 +11,8 @@ import (
 )
 
 var (
-	port        = flag.Int("port", 32400, "Port on which to listen for Plex traffic")
-	pmsUrl      = flag.String("pms-url", os.Getenv("PMS_INTERNAL_ADDRESS"), "URL for the Plex Media Server instance")
+	listenAddr  = flag.String("listen", ":32400", "Address on which to listen for Plex traffic")
+	pmsAddr     = flag.String("pms-addr", "", "Address for the Plex Media Server instance (for example: '10.1.2.3:32400')")
 	codecServer = flag.String("codec-server-url", os.Getenv("CODEC_SERVER"), "URL for codec server (kube-plex)")
 	codecDir    = flag.String("codec-dir", os.Getenv("FFMPEG_EXTERNAL_LIBS"), "Directory to write codecs to, path will be created if doesn't exist")
 	logLevel    = flag.String("loglevel", "", "Set the loglevel for transcoding process")
@@ -27,6 +24,8 @@ func main() {
 
 	klog.Info("Transcode launcher starting...")
 	klog.Infof("Codec directory: %s", *codecDir)
+
+	ctx := context.Background()
 
 	if *codecServer != "" && *codecDir != "" {
 		klog.Infof("Codec server: %s", *codecServer)
@@ -42,25 +41,13 @@ func main() {
 		os.Setenv("FFMPEG_EXTERNAL_LIBS", eCodecDir)
 	}
 
-	if *pmsUrl == "" {
+	if *pmsAddr == "" {
 		klog.Exitf("No Plex address defined (pms-url flag)")
 	}
 
-	url, err := url.Parse(*pmsUrl)
-	if err != nil {
-		klog.Exitf("Unable to parse Plex url: %v", err)
-	}
-
-	klog.Infof("Creating reverse proxy on port %d to %s", *port, *pmsUrl)
-	p := httputil.NewSingleHostReverseProxy(url)
-	s := &http.Server{
-		Addr:    fmt.Sprintf("localhost:%d", *port),
-		Handler: p,
-	}
-	defer s.Close()
-
+	klog.Infof("Creating tunnel server on port %s to %s", *listenAddr, *pmsAddr)
 	srvErr := make(chan error)
-	go func() { srvErr <- s.ListenAndServe() }()
+	go func() { srvErr <- copyListener(ctx, *listenAddr, *pmsAddr) }()
 
 	a := flag.Args()
 

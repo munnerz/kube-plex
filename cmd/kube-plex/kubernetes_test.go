@@ -195,7 +195,7 @@ func Test_generateJob(t *testing.T) {
 		Namespace:     "plex",
 		UID:           "abc123",
 		PmsImage:      "pms:latest",
-		PmsURL:        "http://kubeplex:32400/",
+		PmsAddr:       "kubeplex:32400",
 		KubePlexImage: "kubeplex:latest",
 		Volumes: []corev1.Volume{
 			{Name: "data", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "datapvc"}}},
@@ -233,7 +233,7 @@ func Test_generateJob(t *testing.T) {
 					RestartPolicy: corev1.RestartPolicyNever,
 					Containers: []corev1.Container{{
 						Name:    "plex",
-						Command: []string{"/shared/transcode-launcher", "--pms-url=http://kubeplex:32400/", "--port=32400", "--", "a", "b", "c"},
+						Command: []string{"/shared/transcode-launcher", "--pms-addr=kubeplex:32400", "--listen=:32400", "--", "a", "b", "c"},
 						Image:   "pms:latest",
 						Env: []corev1.EnvVar{
 							{Name: "FOO", Value: "bar"},
