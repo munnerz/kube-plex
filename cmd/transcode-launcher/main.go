@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/exec"
 
 	"github.com/munnerz/kube-plex/internal/ffmpeg"
+	"github.com/munnerz/kube-plex/internal/logger"
 	"k8s.io/klog/v2"
 )
 
@@ -22,6 +24,11 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
+	// Set up logging.
+	l, _ := logger.NewPlexLogger("KubePlexProxy", os.Getenv("X_PLEX_TOKEN"), fmt.Sprintf("http://%s/", *pmsAddr))
+	klog.SetLogger(l)
+
+	// Main launcher start
 	klog.Info("Transcode launcher starting...")
 	klog.Infof("Codec directory: %s", *codecDir)
 

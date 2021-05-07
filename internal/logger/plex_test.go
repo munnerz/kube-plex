@@ -12,13 +12,13 @@ import (
 
 func TestPlexLogger_getURL(t *testing.T) {
 	l := &PlexLogger{}
-	want, _ := url.Parse("http://127.0.0.1:32400/log?source=KubePlex")
+	want, _ := url.Parse("http://127.0.0.1:32400/log")
 
 	if got := l.getURL(); !reflect.DeepEqual(got, *want) {
 		t.Errorf("PlexLogger.getURL() when empty = %v, want %v", got, *want)
 	}
 
-	want, _ = url.Parse("http://test:1234/log?source=KubePlex")
+	want, _ = url.Parse("http://test:1234/log")
 	l = &PlexLogger{plexURL: want}
 
 	got := l.getURL()
@@ -41,12 +41,12 @@ func TestPlexLogger_send(t *testing.T) {
 		level     int
 		message   string
 	}{
-		{"plain message is sent", map[string]interface{}{}, "PTOKEN", args{level: PLEX_LOG_LEVEL_INFO, msg: "test"}, PLEX_LOG_LEVEL_INFO, "test"},
-		{"level is respected", map[string]interface{}{}, "PTOKEN", args{level: PLEX_LOG_LEVEL_ERROR, msg: "test"}, PLEX_LOG_LEVEL_ERROR, "test"},
-		{"message is sent when there is no token", map[string]interface{}{}, "", args{level: PLEX_LOG_LEVEL_INFO, msg: "test"}, PLEX_LOG_LEVEL_INFO, "test"},
-		{"struct kv is sent", map[string]interface{}{"key": "value", "key2": "value2"}, "PTOKEN", args{level: PLEX_LOG_LEVEL_INFO, msg: "test"}, PLEX_LOG_LEVEL_INFO, "test [key:value key2:value2]"},
-		{"message args are sent", map[string]interface{}{}, "PTOKEN", args{level: PLEX_LOG_LEVEL_INFO, msg: "test", kvs: []interface{}{"key", 1, "key2", "value2"}}, PLEX_LOG_LEVEL_INFO, "test [key:1 key2:value2]"},
-		{"message args and struct kv are sent", map[string]interface{}{"skey": 2, "skey2": "svalue2"}, "PTOKEN", args{level: PLEX_LOG_LEVEL_INFO, msg: "test", kvs: []interface{}{"key", 1, "key2", "value2"}}, PLEX_LOG_LEVEL_INFO, "test [skey:2 skey2:svalue2 key:1 key2:value2]"},
+		{"plain message is sent", map[string]interface{}{}, "PTOKEN", args{level: PlexLogInfo, msg: "test"}, PlexLogInfo, "test"},
+		{"level is respected", map[string]interface{}{}, "PTOKEN", args{level: PlexLogError, msg: "test"}, PlexLogError, "test"},
+		{"message is sent when there is no token", map[string]interface{}{}, "", args{level: PlexLogInfo, msg: "test"}, PlexLogInfo, "test"},
+		{"struct kv is sent", map[string]interface{}{"key": "value", "key2": "value2"}, "PTOKEN", args{level: PlexLogInfo, msg: "test"}, PlexLogInfo, "test [key:value key2:value2]"},
+		{"message args are sent", map[string]interface{}{}, "PTOKEN", args{level: PlexLogInfo, msg: "test", kvs: []interface{}{"key", 1, "key2", "value2"}}, PlexLogInfo, "test [key:1 key2:value2]"},
+		{"message args and struct kv are sent", map[string]interface{}{"skey": 2, "skey2": "svalue2"}, "PTOKEN", args{level: PlexLogInfo, msg: "test", kvs: []interface{}{"key", 1, "key2", "value2"}}, PlexLogInfo, "test [skey:2 skey2:svalue2 key:1 key2:value2]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

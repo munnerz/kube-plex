@@ -22,9 +22,12 @@ func main() {
 	// Set up SIGKILL protection
 	ctx = protectSigKill(ctx)
 
-	// Main program start
-	klog.SetLogger(&logger.PlexLogger{})
+	// Set up logging. We can assume that Plex is running on localhost.. that's
+	// what the Plex Transcoder is built to expect too.
+	l, _ := logger.NewPlexLogger("KubePlex", os.Getenv("X_PLEX_TOKEN"), "http://127.0.0.1:32400/")
+	klog.SetLogger(l)
 
+	// Main program start
 	codecPath := ffmpeg.Unescape(os.Getenv("FFMPEG_EXTERNAL_LIBS"))
 	var codecPort int
 	if codecPath != "" {

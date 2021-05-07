@@ -13,18 +13,17 @@ import (
 
 // Log levels known by Plex
 const (
-	PLEX_LOG_LEVEL_ERROR = iota
-	PLEX_LOG_LEVEL_WARNING
-	PLEX_LOG_LEVEL_INFO
-	PLEX_LOG_LEVEL_DEBUG
-	PLEX_LOG_LEVEL_VERBOSE
+	PlexLogError = iota
+	PlexLogWarning
+	PlexLogInfo
+	PlexLogDebug
+	PlexLogVerbose
 )
 
 // NewPlexLogger returns a PlexLogger instance that has URL preset
 //
-// URL should be the base url for Plex Media Server, `/log` path and relevant
-// query parameters will be added
-func NewPlexLogger(token, plexurl string) (*PlexLogger, error) {
+// URL should be the base url for Plex Media Server, `/log` path will be added
+func NewPlexLogger(name, token, plexurl string) (*PlexLogger, error) {
 	u, err := url.Parse(plexurl)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse url: %v", err)
@@ -32,15 +31,10 @@ func NewPlexLogger(token, plexurl string) (*PlexLogger, error) {
 
 	u.Path = strings.TrimSuffix(u.Path, "/") + "/log"
 
-	q := u.Query()
-	if q.Get("source") == "" {
-		q.Add("source", "KubePlex")
-	}
-	u.RawQuery = q.Encode()
-
 	return &PlexLogger{
 		plexURL:   u,
 		plexToken: token,
+		name:      name,
 	}, nil
 }
 
@@ -61,7 +55,7 @@ func (*PlexLogger) Enabled() bool {
 
 // Info level logs are written directly to Plex
 func (l *PlexLogger) Info(msg string, kvs ...interface{}) {
-	l.send(PLEX_LOG_LEVEL_INFO, msg, kvs...)
+	l.send(PlexLogInfo, msg, kvs...)
 }
 
 // Error logs will have the error message passed as error key
@@ -69,10 +63,12 @@ func (l *PlexLogger) Error(err error, msg string, kvs ...interface{}) {
 	if err != nil {
 		kvs = append(kvs, "error", err)
 	}
-	l.send(PLEX_LOG_LEVEL_ERROR, msg, kvs...)
+	l.send(PlexLogError, msg, kvs...)
 }
 
-// We only support single verbosity
+// V returns a logger with the given verbosity
+//
+// We only support single verbosity so always returns the same logger
 func (l *PlexLogger) V(_ int) logr.Logger {
 	return l
 }
@@ -126,6 +122,7 @@ func (l *PlexLogger) send(level int, msg string, kvs ...interface{}) {
 	q := u.Query()
 	q.Set("level", fmt.Sprintf("%d", level))
 	q.Set("message", msg)
+	q.Set("source", l.name)
 	u.RawQuery = q.Encode()
 
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
@@ -150,7 +147,7 @@ func (l *PlexLogger) send(level int, msg string, kvs ...interface{}) {
 // getURL returns either the set URL or the default URL if unset
 func (l *PlexLogger) getURL() url.URL {
 	if l.plexURL == nil {
-		u, _ := url.Parse("http://127.0.0.1:32400/log?source=KubePlex")
+		u, _ := url.Parse("http://127.0.0.1:32400/log")
 		return *u
 	}
 	return *l.plexURL
