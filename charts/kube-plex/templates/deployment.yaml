@@ -28,8 +28,9 @@ spec:
         app: {{ template "name" . }}
         release: {{ .Release.Name }}
       annotations:
+        kube-plex/container-name: "kube-plex-init"
         kube-plex/pms-addr: {{ template "fullname" . }}:32400
-        kube-plex/image: "{{ .Values.kubePlex.image.repository }}:{{ .Values.kubePlex.image.tag }}"
+        kube-plex/pms-container-name: "plex"
         {{- if .Values.kubePlex.loglevel }}
         kube-plex/loglevel: "{{ .Values.kubePlex.loglevel }}"
         {{- end }}
@@ -43,7 +44,7 @@ spec:
       hostname: "{{ template "fullname" . }}"
 {{- if .Values.kubePlex.enabled }}
       initContainers:
-      - name: kube-plex-install
+      - name: kube-plex-init
         image: "{{ .Values.kubePlex.image.repository }}:{{ .Values.kubePlex.image.tag }}"
         imagePullPolicy: {{ .Values.kubePlex.image.pullPolicy }}
         command:

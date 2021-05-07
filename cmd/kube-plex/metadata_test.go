@@ -18,11 +18,15 @@ func Test_pmsMetadata_FetchMetadata(t *testing.T) {
 	validPod := corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: "plex", Name: "pms", UID: "123",
-			Annotations: map[string]string{"kube-plex/pms-addr": "service:32400", "kube-plex/image": "kubeplex:latest"},
+			Annotations: map[string]string{"kube-plex/pms-addr": "service:32400"},
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{Name: "plex", Image: "plex:test"}},
 			Volumes:    []corev1.Volume{{Name: "data"}, {Name: "transcode"}},
+		},
+		Status: corev1.PodStatus{
+			InitContainerStatuses: []corev1.ContainerStatus{{Name: "kube-plex-init", Image: "kubeplex:latest", ImageID: "kubeplex@sha256:12345"}},
+			ContainerStatuses:     []corev1.ContainerStatus{{Name: "plex", Image: "pms:latest", ImageID: "pms@sha256:12345"}},
 		},
 	}
 
@@ -34,7 +38,7 @@ func Test_pmsMetadata_FetchMetadata(t *testing.T) {
 		wantPms      PmsMetadata
 		wantErr      bool
 	}{
-		{"fetches info from api", "pms", "plex", validPod, PmsMetadata{Name: "pms", Namespace: "plex", UID: "123", PmsImage: "plex:test", KubePlexImage: "kubeplex:latest", PmsAddr: "service:32400", Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}, false},
+		{"fetches info from api", "pms", "plex", validPod, PmsMetadata{Name: "pms", Namespace: "plex", UID: "123", PmsImage: "pms@sha256:12345", KubePlexImage: "kubeplex@sha256:12345", PmsAddr: "service:32400", Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}, false},
 		{"fails on missing podname", "", "plex", validPod, PmsMetadata{}, true},
 		{"fails on missing namespace", "pms", "", validPod, PmsMetadata{}, true},
 		{"fails gracefully on wrong pod name", "wrong", "plex", validPod, PmsMetadata{}, true},
@@ -42,9 +46,15 @@ func Test_pmsMetadata_FetchMetadata(t *testing.T) {
 		{"plex container missing", "pms", "plex", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "wrong", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}}, PmsMetadata{}, true},
 		{"plex data volume missing", "pms", "plex", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "transcode"}}}}, PmsMetadata{}, true},
 		{"plex transcode volume missing", "pms", "plex", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "data"}}}}, PmsMetadata{}, true},
-		{"plex service annotation missing", "pms", "plex", corev1.Pod{ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/image": "kp:latest"}}, Spec: validPod.Spec}, PmsMetadata{}, true},
-		{"kube-plex image annotation missing", "pms", "plex", corev1.Pod{ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/pms-addr": "p:32400"}}, Spec: validPod.Spec}, PmsMetadata{}, true},
-		{"kube-plex debug set", "pms", "plex", corev1.Pod{ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/pms-addr": "a:32400", "kube-plex/image": "kp:latest", "kube-plex/loglevel": "debug"}}, Spec: validPod.Spec}, PmsMetadata{Name: "pms", Namespace: "plex", UID: "123", PmsImage: "plex:test", KubePlexImage: "kp:latest", KubePlexLevel: "debug", PmsAddr: "a:32400", Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}, false},
+		{"kube-plex debug set", "pms", "plex", corev1.Pod{ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/pms-addr": "a:32400", "kube-plex/loglevel": "debug"}}, Spec: validPod.Spec, Status: validPod.Status}, PmsMetadata{Name: "pms", Namespace: "plex", UID: "123", PmsImage: "pms@sha256:12345", KubePlexImage: "kubeplex@sha256:12345", KubePlexLevel: "debug", PmsAddr: "a:32400", Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}, false},
+		{"renamed kube-plex container", "pms", "plex",
+			corev1.Pod{ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/container-name": "kp-init", "kube-plex/pms-addr": "a:32400"}}, Spec: validPod.Spec, Status: corev1.PodStatus{ContainerStatuses: validPod.Status.ContainerStatuses, InitContainerStatuses: []corev1.ContainerStatus{{Name: "kp-init", ImageID: "aaa@sha256:12345"}}}},
+			PmsMetadata{Name: "pms", Namespace: "plex", UID: "123", PmsImage: "pms@sha256:12345", KubePlexImage: "aaa@sha256:12345", PmsAddr: "a:32400", Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}, false,
+		},
+		{"renamed PMS container", "pms", "plex",
+			corev1.Pod{ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/pms-container-name": "test", "kube-plex/pms-addr": "a:32400"}}, Spec: validPod.Spec, Status: corev1.PodStatus{InitContainerStatuses: validPod.Status.InitContainerStatuses, ContainerStatuses: []corev1.ContainerStatus{{Name: "test", ImageID: "aaa@sha256:12345"}}}},
+			PmsMetadata{Name: "pms", Namespace: "plex", UID: "123", PmsImage: "aaa@sha256:12345", KubePlexImage: "kubeplex@sha256:12345", PmsAddr: "a:32400", Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}, false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

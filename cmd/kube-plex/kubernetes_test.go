@@ -224,7 +224,7 @@ func Test_generateJob(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					InitContainers: []corev1.Container{{
-						Name:         "transcoder-launcher",
+						Name:         "kube-plex-init",
 						Image:        "kubeplex:latest",
 						Command:      []string{"cp", "/transcode-launcher", "/shared/transcode-launcher"},
 						VolumeMounts: []corev1.VolumeMount{{Name: "shared", MountPath: "/shared", ReadOnly: false}},

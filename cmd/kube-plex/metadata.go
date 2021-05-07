@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	pmsURL        = "kube-plex/pms-addr"
-	kubePlexImage = "kube-plex/image"
-	kubePlexLevel = "kube-plex/loglevel"
+	pmsURL            = "kube-plex/pms-addr"
+	pmsContainer      = "kube-plex/pms-container-name"
+	kubePlexLevel     = "kube-plex/loglevel"
+	kubePlexContainer = "kube-plex/container-name"
 )
 
 // PmsMetadata describes a Plex Media Server instance running in kubernetes.
@@ -52,17 +53,6 @@ func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace
 		PodIP:     pod.Status.PodIP,
 	}
 
-	for _, c := range pod.Spec.Containers {
-		if c.Name == "plex" {
-			m.PmsImage = c.Image
-			break
-		}
-	}
-
-	if m.PmsImage == "" {
-		return PmsMetadata{}, fmt.Errorf("could not find Plex container image, is there a container named `plex`?")
-	}
-
 	// Fetch data volumes from pod spec
 	dv, err := getVolume(pod.Spec, "data")
 	if err != nil {
@@ -85,20 +75,41 @@ func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace
 
 	m.PmsAddr = u
 
-	// Get kube-plex image
-	i, ok := a[kubePlexImage]
-	if !ok {
-		return PmsMetadata{}, fmt.Errorf("unable to determine kube-plex image")
-	}
-
-	m.KubePlexImage = i
-
 	// Get debugging status
 	d := a[kubePlexLevel]
 	// TODO: It would be nice to enforce all valid options here
 	m.KubePlexLevel = d
 
+	// Plex media server container image
+	pmsimage, err := getContainerImage(pmsContainer, "plex", pod, pod.Status.ContainerStatuses)
+	if err != nil {
+		return PmsMetadata{}, fmt.Errorf("unable to determine Plex Media server image (set container name with '%s' annotation): %v", pmsContainer, err)
+	}
+	m.PmsImage = pmsimage
+
+	// Kube-Plex container image
+	kpimage, err := getContainerImage(kubePlexContainer, "kube-plex-init", pod, pod.Status.InitContainerStatuses)
+	if err != nil {
+		return PmsMetadata{}, fmt.Errorf("unable to determine kube-plex image (set init-container name with '%s' annotation): %v", kubePlexContainer, err)
+	}
+	m.KubePlexImage = kpimage
+
 	return m, nil
+}
+
+// getContainerImage from pod status based on the annotation given
+func getContainerImage(annotation, defname string, pod *corev1.Pod, status []corev1.ContainerStatus) (string, error) {
+	a := pod.GetAnnotations()
+	name, ok := a[annotation]
+	if !ok {
+		name = defname
+	}
+	for _, c := range status {
+		if c.Name == name {
+			return c.ImageID, nil
+		}
+	}
+	return "", fmt.Errorf("no containers found by name %s", name)
 }
 
 // getVolume returns a volume matching given name from podspec
