@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,22 +15,25 @@ import (
 const (
 	pmsURL            = "kube-plex/pms-addr"
 	pmsContainer      = "kube-plex/pms-container-name"
+	pmsMounts         = "kube-plex/mounts"
 	kubePlexLevel     = "kube-plex/loglevel"
 	kubePlexContainer = "kube-plex/container-name"
 )
 
 // PmsMetadata describes a Plex Media Server instance running in kubernetes.
 type PmsMetadata struct {
-	Name          string          // Pod Name
-	Namespace     string          // Pod Namespace
-	UID           types.UID       // Pod UID
-	PodIP         string          // Pod IP address
-	Volumes       []corev1.Volume // kube-plex needed volumes
-	KubePlexImage string          // container image for kube-plex
-	KubePlexLevel string          // loglevel of kubeplex processes
-	CodecPort     int             // port on which the codec service runs
-	PmsImage      string          // container image used by Plex Media Server
-	PmsAddr       string          // URL for Plex Media Server
+	Name          string               // Pod Name
+	Namespace     string               // Pod Namespace
+	UID           types.UID            // Pod UID
+	PodIP         string               // Pod IP address
+	Mounts        []string             // List of mounts (paths) to copy to transcoder
+	VolumeMounts  []corev1.VolumeMount // kube-plex volume mounts
+	Volumes       []corev1.Volume      // kube-plex needed volumes
+	KubePlexImage string               // container image for kube-plex
+	KubePlexLevel string               // loglevel of kubeplex processes
+	CodecPort     int                  // port on which the codec service runs
+	PmsImage      string               // container image used by Plex Media Server
+	PmsAddr       string               // URL for Plex Media Server
 }
 
 // FetchMetadata fetches and populates a metadata object based on the current environment
@@ -53,26 +58,12 @@ func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace
 		PodIP:     pod.Status.PodIP,
 	}
 
-	// Fetch data volumes from pod spec
-	dv, err := getVolume(pod.Spec, "data")
-	if err != nil {
-		return PmsMetadata{}, fmt.Errorf("error when getting data volume: %v", err)
-	}
-
-	tv, err := getVolume(pod.Spec, "transcode")
-	if err != nil {
-		return PmsMetadata{}, fmt.Errorf("error when getting transcode volume: %v", err)
-	}
-
-	m.Volumes = []corev1.Volume{dv, tv}
-
 	// Get PMS URL
 	a := pod.GetAnnotations()
 	u, ok := a[pmsURL]
 	if !ok {
 		return PmsMetadata{}, fmt.Errorf("unable to determine plex service URL")
 	}
-
 	m.PmsAddr = u
 
 	// Get debugging status
@@ -81,24 +72,41 @@ func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace
 	m.KubePlexLevel = d
 
 	// Plex media server container image
-	pmsimage, err := getContainerImage(pmsContainer, "plex", pod, pod.Status.ContainerStatuses)
+	pmsimage, pmsname, err := getContainerImage(pmsContainer, "plex", pod, pod.Status.ContainerStatuses)
 	if err != nil {
 		return PmsMetadata{}, fmt.Errorf("unable to determine Plex Media server image (set container name with '%s' annotation): %v", pmsContainer, err)
 	}
 	m.PmsImage = pmsimage
 
 	// Kube-Plex container image
-	kpimage, err := getContainerImage(kubePlexContainer, "kube-plex-init", pod, pod.Status.InitContainerStatuses)
+	kpimage, _, err := getContainerImage(kubePlexContainer, "kube-plex-init", pod, pod.Status.InitContainerStatuses)
 	if err != nil {
 		return PmsMetadata{}, fmt.Errorf("unable to determine kube-plex image (set init-container name with '%s' annotation): %v", kubePlexContainer, err)
 	}
 	m.KubePlexImage = kpimage
 
+	// mounts to copy over
+	mlist, ok := a[pmsMounts]
+	if !ok {
+		// default value, matches the old behaviour
+		mlist = "/transcode,/data"
+	}
+	if mlist != "" {
+		m.Mounts = strings.Split(mlist, ",")
+	}
+
+	v, vm, err := getVolumesAndMounts(m.Mounts, pod, pmsname)
+	if err != nil {
+		return PmsMetadata{}, fmt.Errorf("failed to get volumes and mounts: %v", err)
+	}
+	m.VolumeMounts = vm
+	m.Volumes = v
+
 	return m, nil
 }
 
 // getContainerImage from pod status based on the annotation given
-func getContainerImage(annotation, defname string, pod *corev1.Pod, status []corev1.ContainerStatus) (string, error) {
+func getContainerImage(annotation, defname string, pod *corev1.Pod, status []corev1.ContainerStatus) (string, string, error) {
 	a := pod.GetAnnotations()
 	name, ok := a[annotation]
 	if !ok {
@@ -106,20 +114,68 @@ func getContainerImage(annotation, defname string, pod *corev1.Pod, status []cor
 	}
 	for _, c := range status {
 		if c.Name == name {
-			return c.ImageID, nil
+			return c.ImageID, name, nil
 		}
 	}
-	return "", fmt.Errorf("no containers found by name %s", name)
+	return "", "", fmt.Errorf("no containers found by name %s", name)
 }
 
-// getVolume returns a volume matching given name from podspec
-func getVolume(podspec corev1.PodSpec, name string) (corev1.Volume, error) {
-	for _, v := range podspec.Volumes {
-		if v.Name == name {
-			return v, nil
+// getVolumesAndMounts for given directories in the pod
+func getVolumesAndMounts(dirs []string, pod *corev1.Pod, name string) ([]corev1.Volume, []corev1.VolumeMount, error) {
+	if len(dirs) == 0 {
+		return nil, nil, nil
+	}
+
+	var c *corev1.Container
+	for _, d := range pod.Spec.Containers {
+		if d.Name == name {
+			c = &d
 		}
 	}
-	return corev1.Volume{}, fmt.Errorf("volume %s not found", name)
+	if c == nil {
+		return nil, nil, fmt.Errorf("container %s not found in pod", name)
+	}
+
+	mounts := map[string]corev1.VolumeMount{}
+	for _, m := range c.VolumeMounts {
+		mounts[m.MountPath] = m
+	}
+
+	volumes := map[string]corev1.Volume{}
+	for _, v := range pod.Spec.Volumes {
+		volumes[v.Name] = v
+	}
+
+	// since a single volume can be mounted multiple times, deduplicate volumes
+	var vm []corev1.VolumeMount
+	vtmp := map[string]corev1.Volume{}
+	for _, d := range dirs {
+		m, ok := mounts[d]
+		if !ok {
+			return nil, nil, fmt.Errorf("no volume mount defined for '%s'", d)
+		}
+		vm = append(vm, m)
+
+		v, ok := volumes[m.Name]
+		if !ok {
+			return nil, nil, fmt.Errorf("no volume definition found for volume '%s'", m.Name)
+		}
+		vtmp[m.Name] = v
+	}
+
+	// Finally collect the volumes in a slice for returning (in a predictable order for testing)
+	vkeys := make([]string, 0, len(vtmp))
+	for k := range vtmp {
+		vkeys = append(vkeys, k)
+	}
+	sort.Strings(vkeys)
+
+	var v []corev1.Volume
+	for _, k := range vkeys {
+		v = append(v, vtmp[k])
+	}
+
+	return v, vm, nil
 }
 
 // OwnerReference creates an owner reference that can be used to trigger cleanup

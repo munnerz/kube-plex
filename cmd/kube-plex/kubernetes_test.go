@@ -201,6 +201,7 @@ func Test_generateJob(t *testing.T) {
 			{Name: "data", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "datapvc"}}},
 			{Name: "transcode", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "transcodepvc"}}},
 		},
+		VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}, {Name: "transcode", MountPath: "/transcode"}},
 	}
 	e := []string{"FOO=bar", "BAR=oof"}
 	a := []string{"a", "b", "c"}
@@ -241,9 +242,9 @@ func Test_generateJob(t *testing.T) {
 						},
 						WorkingDir: "/rundir",
 						VolumeMounts: []corev1.VolumeMount{
+							{Name: "shared", MountPath: "/shared", ReadOnly: false},
 							{Name: "data", MountPath: "/data", ReadOnly: false},
 							{Name: "transcode", MountPath: "/transcode", ReadOnly: false},
-							{Name: "shared", MountPath: "/shared", ReadOnly: false},
 						},
 					}},
 					Volumes: []corev1.Volume{
