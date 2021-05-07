@@ -11,12 +11,13 @@ import (
 )
 
 const (
-	pmsUrl        = "kube-plex/pms-addr"
+	pmsURL        = "kube-plex/pms-addr"
 	kubePlexImage = "kube-plex/image"
 	kubePlexLevel = "kube-plex/loglevel"
 )
 
-type pmsMetadata struct {
+// PmsMetadata describes a Plex Media Server instance running in kubernetes.
+type PmsMetadata struct {
 	Name          string          // Pod Name
 	Namespace     string          // Pod Namespace
 	UID           types.UID       // Pod UID
@@ -29,21 +30,22 @@ type pmsMetadata struct {
 	PmsAddr       string          // URL for Plex Media Server
 }
 
-func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace string) (pmsMetadata, error) {
+// FetchMetadata fetches and populates a metadata object based on the current environment
+func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace string) (PmsMetadata, error) {
 	if name == "" {
-		return pmsMetadata{}, fmt.Errorf("pod name is empty")
+		return PmsMetadata{}, fmt.Errorf("pod name is empty")
 	}
 
 	if namespace == "" {
-		return pmsMetadata{}, fmt.Errorf("namespace is empty")
+		return PmsMetadata{}, fmt.Errorf("namespace is empty")
 	}
 
 	pod, err := cl.CoreV1().Pods(namespace).Get(ctx, name, v1.GetOptions{})
 	if err != nil {
-		return pmsMetadata{}, fmt.Errorf("unable to fetch Pod info: %v", err)
+		return PmsMetadata{}, fmt.Errorf("unable to fetch Pod info: %v", err)
 	}
 
-	m := pmsMetadata{
+	m := PmsMetadata{
 		Name:      pod.GetName(),
 		Namespace: pod.GetNamespace(),
 		UID:       pod.GetUID(),
@@ -58,27 +60,27 @@ func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace
 	}
 
 	if m.PmsImage == "" {
-		return pmsMetadata{}, fmt.Errorf("could not find Plex container image, is there a container named `plex`?")
+		return PmsMetadata{}, fmt.Errorf("could not find Plex container image, is there a container named `plex`?")
 	}
 
 	// Fetch data volumes from pod spec
 	dv, err := getVolume(pod.Spec, "data")
 	if err != nil {
-		return pmsMetadata{}, fmt.Errorf("error when getting data volume: %v", err)
+		return PmsMetadata{}, fmt.Errorf("error when getting data volume: %v", err)
 	}
 
 	tv, err := getVolume(pod.Spec, "transcode")
 	if err != nil {
-		return pmsMetadata{}, fmt.Errorf("error when getting transcode volume: %v", err)
+		return PmsMetadata{}, fmt.Errorf("error when getting transcode volume: %v", err)
 	}
 
 	m.Volumes = []corev1.Volume{dv, tv}
 
 	// Get PMS URL
 	a := pod.GetAnnotations()
-	u, ok := a[pmsUrl]
+	u, ok := a[pmsURL]
 	if !ok {
-		return pmsMetadata{}, fmt.Errorf("unable to determine plex service URL")
+		return PmsMetadata{}, fmt.Errorf("unable to determine plex service URL")
 	}
 
 	m.PmsAddr = u
@@ -86,7 +88,7 @@ func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace
 	// Get kube-plex image
 	i, ok := a[kubePlexImage]
 	if !ok {
-		return pmsMetadata{}, fmt.Errorf("unable to determine kube-plex image")
+		return PmsMetadata{}, fmt.Errorf("unable to determine kube-plex image")
 	}
 
 	m.KubePlexImage = i
@@ -109,7 +111,9 @@ func getVolume(podspec corev1.PodSpec, name string) (corev1.Volume, error) {
 	return corev1.Volume{}, fmt.Errorf("volume %s not found", name)
 }
 
-func (p pmsMetadata) OwnerReference() (v1.OwnerReference, error) {
+// OwnerReference creates an owner reference that can be used to trigger cleanup
+// when this PMS instance is deleted
+func (p PmsMetadata) OwnerReference() (v1.OwnerReference, error) {
 	if p.UID == "" {
 		return v1.OwnerReference{}, fmt.Errorf("UUID is empty, has Fetch() been run?")
 	}
@@ -122,7 +126,8 @@ func (p pmsMetadata) OwnerReference() (v1.OwnerReference, error) {
 	}, nil
 }
 
-func (p pmsMetadata) LauncherCmd(args ...string) []string {
+// LauncherCmd returns a valid launcher command for this transcode operation
+func (p PmsMetadata) LauncherCmd(args ...string) []string {
 	a := []string{
 		"/shared/transcode-launcher",
 		fmt.Sprintf("--pms-addr=%s", p.PmsAddr),

@@ -15,7 +15,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func generateJob(cwd string, m pmsMetadata, env []string, args []string) (*batch.Job, error) {
+func generateJob(cwd string, m PmsMetadata, env []string, args []string) (*batch.Job, error) {
 	envVars := filterPodEnv(toCoreV1EnvVar(env))
 	var ttl, backoff int32
 	ttl = int32((24 * time.Hour).Seconds())

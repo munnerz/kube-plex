@@ -190,7 +190,7 @@ func Test_podWatcher(t *testing.T) {
 }
 
 func Test_generateJob(t *testing.T) {
-	md := pmsMetadata{
+	md := PmsMetadata{
 		Name:          "pms",
 		Namespace:     "plex",
 		UID:           "abc123",
