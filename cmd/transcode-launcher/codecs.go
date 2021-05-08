@@ -46,7 +46,7 @@ func unpackCodecs(dest string, r io.Reader) error {
 			if err := os.MkdirAll(absName, finfo.Mode()); err != nil {
 				return fmt.Errorf("failed to create directory %s: %v", name, err)
 			}
-			klog.Infof("Mkdir(%s)", name)
+			klog.V(1).Infof("Mkdir(%s)", name)
 			continue
 		}
 
@@ -69,7 +69,7 @@ func unpackCodecs(dest string, r io.Reader) error {
 		if n != finfo.Size() {
 			return fmt.Errorf("wrote %d, size %d", n, finfo.Size())
 		}
-		klog.Infof("Write(%s)", name)
+		klog.V(1).Infof("Write(%s)", name)
 	}
 	return nil
 }

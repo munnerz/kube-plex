@@ -21,6 +21,11 @@ var (
 )
 
 func main() {
+	rcode := launch()
+	os.Exit(rcode)
+}
+
+func launch() int {
 	klog.InitFlags(nil)
 	flag.Parse()
 
@@ -38,7 +43,8 @@ func main() {
 		klog.Infof("Codec server: %s", *codecServer)
 		err := downloadCodecs(*codecDir, *codecServer)
 		if err != nil {
-			klog.Exitf("failed to download codecs: %v", err)
+			klog.ErrorS(err, "failed to download codecs")
+			return 1
 		}
 
 		// write escaped codec directory to FFmpeg environmen
@@ -49,7 +55,8 @@ func main() {
 	}
 
 	if *pmsAddr == "" {
-		klog.Exitf("No Plex address defined (pms-url flag)")
+		klog.Error("No Plex address defined (pms-url flag)")
+		return 1
 	}
 
 	klog.Infof("Creating tunnel server on port %s to %s", *listenAddr, *pmsAddr)
@@ -76,17 +83,19 @@ func main() {
 
 	cmdErr := make(chan error)
 	go func() {
-		klog.Info("Transcode output begins...")
-		klog.Info("--------------------------------------------")
+		klog.Info("Transcode begins...")
 		cmdErr <- cmd.Run()
 	}()
 
 	select {
 	case err := <-srvErr:
-		klog.Exitf("reverse proxy exited with error: %v", err)
+		klog.ErrorS(err, "reverse proxy exited with error")
+		return 1
 	case err := <-cmdErr:
 		if err != nil {
-			klog.Exitf("transcode failed with error: %v", err)
+			klog.ErrorS(err, "transcode failed")
+			return 1
 		}
 	}
+	return 0
 }

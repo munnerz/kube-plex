@@ -68,9 +68,9 @@ func (l *PlexLogger) Error(err error, msg string, kvs ...interface{}) {
 
 // V returns a logger with the given verbosity
 //
-// We only support single verbosity so always returns the same logger
-func (l *PlexLogger) V(_ int) logr.Logger {
-	return l
+// In practice, this only adds a verbosity label to the log entry
+func (l *PlexLogger) V(v int) logr.Logger {
+	return l.WithValues("verbosity", v)
 }
 
 // WithName adds an element to the logger name
