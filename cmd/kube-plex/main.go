@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 
@@ -26,6 +28,12 @@ func main() {
 	// what the Plex Transcoder is built to expect too.
 	l, _ := logger.NewPlexLogger("KubePlex", os.Getenv("X_PLEX_TOKEN"), "http://127.0.0.1:32400/")
 	klog.SetLogger(l)
+
+	if needBypass() {
+		klog.Info("Bypassing kube-plex and launching original binary")
+		bypassKubePlex(ctx)
+		os.Exit(0)
+	}
 
 	// Main program start
 	codecPath := ffmpeg.Unescape(os.Getenv("FFMPEG_EXTERNAL_LIBS"))
@@ -129,4 +137,38 @@ func main() {
 		}
 	}
 	stop()
+}
+
+// Checks if bypass is needed
+func needBypass() bool {
+	badArg := "eac3_eae"
+	for _, a := range os.Args {
+		if a == badArg {
+			return true
+		}
+	}
+	return false
+}
+
+// re-execute original transcoder
+func bypassKubePlex(ctx context.Context) {
+	args := os.Args
+	tc := args[0]
+	tc = tc + ".orig"
+
+	// Setup original process
+	cmd := exec.CommandContext(ctx, tc, args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	ecode := 0
+	if err != nil {
+		if cerr, ok := err.(*exec.ExitError); ok {
+			ecode = cerr.ExitCode()
+		}
+		fmt.Printf("Error while starting original binary: %v\n", err)
+	}
+
+	// Quit once subprocess is done
+	os.Exit(ecode)
 }

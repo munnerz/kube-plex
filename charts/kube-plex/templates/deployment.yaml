@@ -71,7 +71,7 @@ spec:
               - |
                 #!/bin/bash
                 set -e
-                rm -f '/usr/lib/plexmediaserver/Plex Transcoder'
+                mv '/usr/lib/plexmediaserver/Plex Transcoder' '/usr/lib/plexmediaserver/Plex Transcoder.orig' 
                 cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'
 {{- end }}
         readinessProbe:
