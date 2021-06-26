@@ -23,6 +23,11 @@ kubePlex:
     # limits:
     #   "gpu.intel.com/i915: 1
 
+  # Mounts which should be carried over to kube-plex transcoder. By default only
+  # /data and /transcode are cloned to the transcoding pod. A comma separated list.
+  #
+  ## mounts: /data,/transcode
+
 
 # Override this with the plex claim token from plex.tv/claim
 claimToken: ""

@@ -40,6 +40,9 @@ spec:
         {{- if .Values.kubePlex.resources.limits }}
         kube-plex/resources-limits: {{ toJson .Values.kubePlex.resources.limits | quote }}
         {{- end}}
+        {{- if .Values.kubePlex.mounts }}
+        kube-plex/mounts: {{ .Values.kubePlex.mounts }}
+        {{- end}}
       {{- if .Values.podAnnotations }}
         {{- range $key, $value := .Values.podAnnotations }}
         {{ $key }}: {{ $value | quote }}
