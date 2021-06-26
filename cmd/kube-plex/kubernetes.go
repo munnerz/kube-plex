@@ -52,6 +52,7 @@ func generateJob(cwd string, m PmsMetadata, env []string, args []string) (*batch
 								[]corev1.VolumeMount{{Name: "shared", MountPath: "/shared"}},
 								m.VolumeMounts...,
 							),
+							Resources: m.ResourceRequirements(),
 						},
 					},
 					InitContainers: []corev1.Container{{

@@ -34,6 +34,12 @@ spec:
         {{- if .Values.kubePlex.loglevel }}
         kube-plex/loglevel: "{{ .Values.kubePlex.loglevel }}"
         {{- end }}
+        {{- if .Values.kubePlex.resources.requests }}
+        kube-plex/resources-requests: {{ toJson .Values.kubePlex.resources.requests }}
+        {{- end}}
+        {{- if .Values.kubePlex.resources.limits }}
+        kube-plex/resources-limits: {{ toJson .Values.kubePlex.resources.limits }}
+        {{- end}}
       {{- if .Values.podAnnotations }}
         {{- range $key, $value := .Values.podAnnotations }}
         {{ $key }}: {{ $value | quote }}

@@ -10,30 +10,35 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 const (
-	pmsURL            = "kube-plex/pms-addr"
-	pmsContainer      = "kube-plex/pms-container-name"
-	pmsMounts         = "kube-plex/mounts"
-	kubePlexLevel     = "kube-plex/loglevel"
-	kubePlexContainer = "kube-plex/container-name"
+	pmsURL                = "kube-plex/pms-addr"
+	pmsContainer          = "kube-plex/pms-container-name"
+	pmsMounts             = "kube-plex/mounts"
+	kubePlexLevel         = "kube-plex/loglevel"
+	kubePlexContainer     = "kube-plex/container-name"
+	kubePlexResourceReq   = "kube-plex/resources-requests"
+	kubePlexResourceLimit = "kube-plex/resources-limits"
 )
 
 // PmsMetadata describes a Plex Media Server instance running in kubernetes.
 type PmsMetadata struct {
-	Name          string               // Pod Name
-	Namespace     string               // Pod Namespace
-	UID           types.UID            // Pod UID
-	PodIP         string               // Pod IP address
-	Mounts        []string             // List of mounts (paths) to copy to transcoder
-	VolumeMounts  []corev1.VolumeMount // kube-plex volume mounts
-	Volumes       []corev1.Volume      // kube-plex needed volumes
-	KubePlexImage string               // container image for kube-plex
-	KubePlexLevel string               // loglevel of kubeplex processes
-	CodecPort     int                  // port on which the codec service runs
-	PmsImage      string               // container image used by Plex Media Server
-	PmsAddr       string               // URL for Plex Media Server
+	Name             string               // Pod Name
+	Namespace        string               // Pod Namespace
+	UID              types.UID            // Pod UID
+	PodIP            string               // Pod IP address
+	Mounts           []string             // List of mounts (paths) to copy to transcoder
+	VolumeMounts     []corev1.VolumeMount // kube-plex volume mounts
+	Volumes          []corev1.Volume      // kube-plex needed volumes
+	ResourceRequests corev1.ResourceList  // Resource requests definition for kube-plex
+	ResourceLimits   corev1.ResourceList  // Resource limits definition for kube-plex
+	KubePlexImage    string               // container image for kube-plex
+	KubePlexLevel    string               // loglevel of kubeplex processes
+	CodecPort        int                  // port on which the codec service runs
+	PmsImage         string               // container image used by Plex Media Server
+	PmsAddr          string               // URL for Plex Media Server
 }
 
 // FetchMetadata fetches and populates a metadata object based on the current environment
@@ -102,7 +107,30 @@ func FetchMetadata(ctx context.Context, cl kubernetes.Interface, name, namespace
 	m.VolumeMounts = vm
 	m.Volumes = v
 
+	// resource requests and limits
+	r := a[kubePlexResourceReq]
+	rl, err := parseResourcesJSON(r)
+	if err != nil {
+		return PmsMetadata{}, fmt.Errorf("failed to parse resource requests `%s`: %v", r, err)
+	}
+	m.ResourceRequests = rl
+
+	l := a[kubePlexResourceLimit]
+	ll, err := parseResourcesJSON(l)
+	if err != nil {
+		return PmsMetadata{}, fmt.Errorf("failed to parse resource limits `%s`: %v", l, err)
+	}
+	m.ResourceLimits = ll
+
 	return m, nil
+}
+
+// ResourceRequirements creates a container resource requirements object by combining limits and requests
+func (p PmsMetadata) ResourceRequirements() corev1.ResourceRequirements {
+	return corev1.ResourceRequirements{
+		Limits:   p.ResourceLimits,
+		Requests: p.ResourceRequests,
+	}
 }
 
 // getContainerImage from pod status based on the annotation given
@@ -211,4 +239,34 @@ func (p PmsMetadata) LauncherCmd(args ...string) []string {
 	}
 	a = append(a, "--")
 	return append(a, args...)
+}
+
+// podTemplate is a dummy pod definition that is used to construct a parseable
+// resource for Kubernetes client parser.
+const specTemplate = `
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - resources:
+      requests:
+        `
+
+// parseResourceJSON uses Kubernetes parser to parse a resource limits or requests definition to a ResourceList
+func parseResourcesJSON(t string) (corev1.ResourceList, error) {
+	if t == "" {
+		return nil, nil
+	}
+
+	o, _, err := scheme.Codecs.UniversalDeserializer().Decode([]byte(specTemplate+t), nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read resource yaml: %v", err)
+	}
+
+	p := o.(*corev1.Pod)
+	c := p.Spec.Containers
+	if len(c) != 1 {
+		return nil, fmt.Errorf("invalid object returned by decode")
+	}
+	return c[0].Resources.Requests, nil
 }
