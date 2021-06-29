@@ -3,9 +3,9 @@ name: Build container image
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -34,6 +34,7 @@ jobs:
           tags: |
             type=ref,event=pr
             type=ref,event=branch
+            type=ref,event=tag
             type=sha
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
