@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 
 	"github.com/munnerz/kube-plex/internal/ffmpeg"
 	"github.com/munnerz/kube-plex/internal/logger"
@@ -29,7 +30,7 @@ func main() {
 	l, _ := logger.NewPlexLogger("KubePlex", os.Getenv("X_PLEX_TOKEN"), "http://127.0.0.1:32400/")
 	klog.SetLogger(l)
 
-	if needBypass() {
+	if needBypass(os.Args) {
 		klog.Info("Bypassing kube-plex and launching original binary")
 		bypassKubePlex(ctx)
 		os.Exit(0)
@@ -140,10 +141,10 @@ func main() {
 }
 
 // Checks if bypass is needed
-func needBypass() bool {
-	badArg := "eac3_eae"
-	for _, a := range os.Args {
-		if a == badArg {
+func needBypass(args []string) bool {
+	badArg, _ := regexp.Compile("^(e?ac3|truehd|mlp)_eae$")
+	for _, a := range args {
+		if badArg.Match([]byte(a)) {
 			return true
 		}
 	}
