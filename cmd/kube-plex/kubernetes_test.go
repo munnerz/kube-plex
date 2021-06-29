@@ -8,6 +8,7 @@ import (
 	"github.com/go-test/deep"
 	batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -190,6 +191,7 @@ func Test_podWatcher(t *testing.T) {
 }
 
 func Test_generateJob(t *testing.T) {
+	cpuMilli, _ := resource.ParseQuantity("100m")
 	md := PmsMetadata{
 		Name:          "pms",
 		Namespace:     "plex",
@@ -201,7 +203,8 @@ func Test_generateJob(t *testing.T) {
 			{Name: "data", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "datapvc"}}},
 			{Name: "transcode", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "transcodepvc"}}},
 		},
-		VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}, {Name: "transcode", MountPath: "/transcode"}},
+		VolumeMounts:     []corev1.VolumeMount{{Name: "data", MountPath: "/data"}, {Name: "transcode", MountPath: "/transcode"}},
+		ResourceRequests: corev1.ResourceList{corev1.ResourceCPU: cpuMilli},
 	}
 	e := []string{"FOO=bar", "BAR=oof"}
 	a := []string{"a", "b", "c"}
@@ -245,6 +248,9 @@ func Test_generateJob(t *testing.T) {
 							{Name: "shared", MountPath: "/shared", ReadOnly: false},
 							{Name: "data", MountPath: "/data", ReadOnly: false},
 							{Name: "transcode", MountPath: "/transcode", ReadOnly: false},
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{corev1.ResourceCPU: cpuMilli},
 						},
 					}},
 					Volumes: []corev1.Volume{

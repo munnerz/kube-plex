@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-test/deep"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -15,6 +16,7 @@ func Test_pmsMetadata_FetchMetadata(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	cpuQuantity, _ := resource.ParseQuantity("1")
 	validPod := corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: "plex", Name: "pms", UID: "123",
@@ -48,6 +50,21 @@ func Test_pmsMetadata_FetchMetadata(t *testing.T) {
 		{"fails gracefully on wrong namespace", "pms", "wrong", validPod, PmsMetadata{}, true},
 		{"plex container missing", "pms", "plex", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "wrong", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "data"}, {Name: "transcode"}}}}, PmsMetadata{}, true},
 		{"plex data volume missing", "pms", "plex", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "transcode"}}}}, PmsMetadata{}, true},
+		{"plex default volumes", "pms", "plex",
+			corev1.Pod{
+				ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/pms-addr": "service:32400"}},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "plex", Image: "plex:test", VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}, {Name: "transcode", MountPath: "/transcode"}}}},
+					Volumes:    []corev1.Volume{{Name: "transcode"}, {Name: "data"}}},
+				Status: validPod.Status,
+			},
+			PmsMetadata{
+				Name: "pms", Namespace: "plex", UID: "123", PmsImage: "pms@sha256:12345", KubePlexImage: "kubeplex@sha256:12345", PmsAddr: "service:32400",
+				Mounts:       []string{"/transcode", "/data"},
+				VolumeMounts: []corev1.VolumeMount{{Name: "transcode", MountPath: "/transcode"}, {Name: "data", MountPath: "/data"}},
+				Volumes:      []corev1.Volume{{Name: "data"}, {Name: "transcode"}},
+			},
+			false},
 		{"plex transcode volume missing", "pms", "plex", corev1.Pod{ObjectMeta: validPod.ObjectMeta, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "plex", Image: "pms:own"}}, Volumes: []corev1.Volume{{Name: "data"}}}}, PmsMetadata{}, true},
 		{"kube-plex debug set", "pms", "plex", corev1.Pod{
 			ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/pms-addr": "a:32400", "kube-plex/loglevel": "debug", "kube-plex/mounts": ""}}, Spec: validPod.Spec, Status: validPod.Status},
@@ -62,6 +79,11 @@ func Test_pmsMetadata_FetchMetadata(t *testing.T) {
 		{"renamed PMS container", "pms", "plex",
 			corev1.Pod{ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/pms-container-name": "test", "kube-plex/pms-addr": "a:32400", "kube-plex/mounts": ""}}, Spec: validPod.Spec, Status: corev1.PodStatus{InitContainerStatuses: validPod.Status.InitContainerStatuses, ContainerStatuses: []corev1.ContainerStatus{{Name: "test", ImageID: "aaa@sha256:12345"}}}},
 			PmsMetadata{Name: "pms", Namespace: "plex", UID: "123", PmsImage: "aaa@sha256:12345", KubePlexImage: "kubeplex@sha256:12345", PmsAddr: "a:32400"},
+			false,
+		},
+		{"sets resource definitions", "pms", "plex",
+			corev1.Pod{ObjectMeta: v1.ObjectMeta{Namespace: "plex", Name: "pms", UID: "123", Annotations: map[string]string{"kube-plex/pms-addr": "a:32400", "kube-plex/mounts": "", "kube-plex/resources-requests": "{\"cpu\": \"1\"}", "kube-plex/resources-limits": "{\"cpu\": \"1\"}"}}, Spec: validPod.Spec, Status: validPod.Status},
+			PmsMetadata{Name: "pms", Namespace: "plex", UID: "123", PmsImage: "pms@sha256:12345", KubePlexImage: "kubeplex@sha256:12345", PmsAddr: "a:32400", ResourceRequests: corev1.ResourceList{corev1.ResourceCPU: cpuQuantity}, ResourceLimits: corev1.ResourceList{corev1.ResourceCPU: cpuQuantity}},
 			false,
 		},
 	}
@@ -185,6 +207,66 @@ func Test_getVolumesAndMounts(t *testing.T) {
 			}
 			if diff := deep.Equal(mounts, tt.wantMount); diff != nil {
 				t.Errorf("getVolumesAndMounts() mounts don't match diff = %v", diff)
+			}
+		})
+	}
+}
+
+func Test_parseResources(t *testing.T) {
+	cpuMilli, _ := resource.ParseQuantity("100m")
+	qOne, _ := resource.ParseQuantity("1")
+	tests := []struct {
+		name    string
+		t       string
+		want    corev1.ResourceList
+		wantErr bool
+	}{
+		{"empty input returns nil", "", nil, false},
+		{"handles json input", "{\"cpu\": \"100m\"}", corev1.ResourceList{corev1.ResourceCPU: cpuMilli}, false},
+		{"handles arbitrary fields", "{\"intel.gpu\": 1}", corev1.ResourceList{"intel.gpu": qOne}, false},
+		{"returns error on broken json", "{\"", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseResourcesJSON(tt.t)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseResources() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseResources() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPmsMetadata_ResourceRequirements(t *testing.T) {
+	cpuMilli, _ := resource.ParseQuantity("100m")
+	type fields struct {
+		ResourceRequests corev1.ResourceList
+		ResourceLimits   corev1.ResourceList
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   corev1.ResourceRequirements
+	}{
+		{"empty object when no requests exist", fields{}, corev1.ResourceRequirements{}},
+		{"limit only", fields{ResourceRequests: corev1.ResourceList{corev1.ResourceCPU: cpuMilli}}, corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceCPU: cpuMilli}}},
+		{"request only", fields{ResourceLimits: corev1.ResourceList{corev1.ResourceCPU: cpuMilli}}, corev1.ResourceRequirements{Limits: corev1.ResourceList{corev1.ResourceCPU: cpuMilli}}},
+		{"both requests and limits",
+			fields{ResourceLimits: corev1.ResourceList{corev1.ResourceCPU: cpuMilli}, ResourceRequests: corev1.ResourceList{corev1.ResourceCPU: cpuMilli}},
+			corev1.ResourceRequirements{Limits: corev1.ResourceList{corev1.ResourceCPU: cpuMilli}, Requests: corev1.ResourceList{corev1.ResourceCPU: cpuMilli}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := PmsMetadata{
+				ResourceRequests: tt.fields.ResourceRequests,
+				ResourceLimits:   tt.fields.ResourceLimits,
+			}
+			if got := m.ResourceRequirements(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("PmsMetadata.ResourceRequirements() = %v, want %v", got, tt.want)
 			}
 		})
 	}
