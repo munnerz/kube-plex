@@ -29,7 +29,7 @@ spec:
         release: {{ .Release.Name }}
       annotations:
         kube-plex/container-name: "kube-plex-init"
-        kube-plex/pms-addr: {{ template "fullname" . }}:32400
+        kube-plex/pms-addr: {{ template "fullname" . }}:{{ .Values.service.port }}
         kube-plex/pms-container-name: "plex"
         {{- if .Values.kubePlex.loglevel }}
         kube-plex/loglevel: "{{ .Values.kubePlex.loglevel }}"
@@ -83,23 +83,27 @@ spec:
                 mv '/usr/lib/plexmediaserver/Plex Transcoder' '/usr/lib/plexmediaserver/Plex Transcoder.orig' 
                 cp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'
 {{- end }}
-        readinessProbe:
-          httpGet:
-            path: /identity
-            port: 32400
-          initialDelaySeconds: 15
-          timeoutSeconds: 5
-        livenessProbe:
-          httpGet:
-            path: /identity
-            port: 32400
-          initialDelaySeconds: 10
-          timeoutSeconds: 10
+{{- range $probeName, $probe := .Values.probes }}
+  {{- if $probe.enabled -}}
+    {{- "" | nindent 8 }}
+    {{- $probeName }}Probe:
+    {{- if $probe.custom -}}
+      {{- $probe.spec | toYaml | nindent 10 }}
+    {{- else }}
+      {{- "tcpSocket:" | nindent 10 }}
+        {{- printf "port: %v" $.Values.service.port  | nindent 12 }}
+      {{- printf "initialDelaySeconds: %v" $probe.spec.initialDelaySeconds  | nindent 10 }}
+      {{- printf "failureThreshold: %v" $probe.spec.failureThreshold  | nindent 10 }}
+      {{- printf "timeoutSeconds: %v" $probe.spec.timeoutSeconds  | nindent 10 }}
+      {{- printf "periodSeconds: %v" $probe.spec.periodSeconds | nindent 10 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
         ports:
           - name: pms
-            containerPort: 32400
+            containerPort: {{ .Values.service.port }}
           - name: http
-            containerPort: 32400
+            containerPort: {{ .Values.service.port }}
           - name: https
             containerPort: 32443
         env:
