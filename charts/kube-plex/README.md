@@ -7,7 +7,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | Parameter                  | Description                         | Default                                                 |
 |----------------------------|-------------------------------------|---------------------------------------------------------|
 | `image.repository`         | Image repository | `plexinc/pms-docker` |
-| `image.tag`                | Image tag. Possible values listed [here](https://hub.docker.com/r/plexinc/pms-docker/tags/).| `1.10.1.4602-f54242b6b`|
+| `image.tag`                | Image tag. Possible values listed [here](https://hub.docker.com/r/plexinc/pms-docker/tags/).| `1.16.0.1226-7eb2c8f6f`|
 | `image.pullPolicy`         | Image pull policy | `IfNotPresent` |
 | `kubePlex.enabled`         | Enable KubPlex transcoder | `true` |
 | `kubePlex.image.repository`         | Image repository | `quay.io/munnerz/kube-plex` |
@@ -20,10 +20,19 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `service.annotations`   | Service annotations for the Plex GUI | `{}` |
 | `service.labels`        | Custom labels | `{}` |
 | `service.loadBalancerIP` | Load balancer IP for the Plex GUI; set `service.type` to `LoadBalancer` to use this. | `{}` |
-| `service.loadBalancerSourceRanges` | List of IP CIDRs allowed access to load balancer (if supported)      | None
+| `service.loadBalancerSourceRanges` | List of IP CIDRs allowed access to load balancer (if supported)      | None |
+| `probes.liveness.custom` | Set this to `true` if you wish to specify your own livenessProbe | `false` |
+| `probes.liveness.enabled` | Enable the liveness probe | `true` |
+| `probes.liveness.spec` | The spec field contains the values for the default livenessProbe. If you selected `custom: true`, this field holds the definition of the livenessProbe. | `` |
+| `probes.readiness.custom` | Set this to `true` if you wish to specify your own readinessProbe | `false` |
+| `probes.readiness.enabled` | Enable the readiness probe | `true` |
+| `probes.readiness.spec` | The spec field contains the values for the default readinessProbe. If you selected `custom: true`, this field holds the definition of the readinessProbe. | `` |
+| `probes.startup.custom` | Set this to `true` if you wish to specify your own startupProbe | `false` |
+| `probes.startup.enabled` | Enable the startup probe | `true` |
+| `probes.startup.spec` | The spec field contains the values for the default startupProbe. If you selected `custom: true`, this field holds the definition of the startupProbe. |
 | `ingress.enabled`              | Enables Ingress | `false` |
 | `ingress.annotations`          | Ingress annotations | `{}` |
-| `ingress.labels`               | Custom labels                       | `{}`
+| `ingress.labels`               | Custom labels | `{}` |
 | `ingress.path`                 | Ingress path | `/` |
 | `ingress.hosts`                | Ingress accepted hostnames | `chart-example.local` |
 | `ingress.tls`                  | Ingress TLS configuration | `[]` |
