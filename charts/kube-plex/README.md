@@ -10,7 +10,7 @@ The following tables lists the configurable parameters of the Plex chart and the
 | `image.tag`                | Image tag. Possible values listed [here](https://hub.docker.com/r/plexinc/pms-docker/tags/).| `1.16.0.1226-7eb2c8f6f`|
 | `image.pullPolicy`         | Image pull policy | `IfNotPresent` |
 | `kubePlex.enabled`         | Enable KubPlex transcoder | `true` |
-| `kubePlex.image.repository`         | Image repository | `quay.io/munnerz/kube-plex` |
+| `kubePlex.image.repository`         | Image repository | `ghcr.io/ressu/kube-plex` |
 | `kubePlex.image.tag`                | Image tag. | `latest`|
 | `kubePlex.image.pullPolicy`         | Image pull policy | `IfNotPresent` |
 | `claimToken`                 | Plex Claim Token to authenticate your acount | `` |

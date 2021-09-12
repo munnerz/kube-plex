@@ -10,7 +10,7 @@ kubePlex:
   enabled: true
   loglevel: ""
   image:
-    repository: quay.io/munnerz/kube-plex
+    repository: ghcr.io/ressu/kube-plex
     tag: latest
     pullPolicy: Always
   resources: {}
