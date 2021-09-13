@@ -1,10 +1,19 @@
 # Default values for kube-plex.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+
+# Default image configuration for ease of deployment
 image:
   repository: plexinc/pms-docker
-  tag: 1.16.0.1226-7eb2c8f6f
-  pullPolicy: IfNotPresent
+  tag: latest
+  pullPolicy: Always
+
+# More recommended image configuration is to use a specific tag to make upgrades
+# predictable. For example:
+# image:
+#   repository: plexinc/pms-docker
+#   tag: 1.24.2.4973-2b1b51db9
+#   pullPolicy: IfNotPresent
 
 kubePlex:
   enabled: true
