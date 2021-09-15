@@ -142,7 +142,11 @@ func getContainerImage(annotation, defname string, pod *corev1.Pod, status []cor
 	}
 	for _, c := range status {
 		if c.Name == name {
-			return c.ImageID, name, nil
+			imageID := c.ImageID
+			if strings.HasPrefix(imageID, "docker-pullable://") {
+				imageID = imageID[18:]
+			}
+			return imageID, name, nil
 		}
 	}
 	return "", "", fmt.Errorf("no containers found by name %s", name)

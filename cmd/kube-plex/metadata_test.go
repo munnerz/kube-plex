@@ -271,3 +271,40 @@ func TestPmsMetadata_ResourceRequirements(t *testing.T) {
 		})
 	}
 }
+
+func Test_getContainerImage(t *testing.T) {
+	type args struct {
+		annotation string
+		defname    string
+		pod        *corev1.Pod
+		status     []corev1.ContainerStatus
+	}
+	tests := []struct {
+		name      string
+		args      args
+		wantImage string
+		wantName  string
+		wantErr   bool
+	}{
+		{"docker pullable", args{defname: "kube-plex", pod: &corev1.Pod{}, status: []corev1.ContainerStatus{corev1.ContainerStatus{Name: "kube-plex", ImageID: "docker-pullable://a/b@sha256:abc"}}}, "a/b@sha256:abc", "kube-plex", false},
+		{"containerd image", args{defname: "kube-plex", pod: &corev1.Pod{}, status: []corev1.ContainerStatus{corev1.ContainerStatus{Name: "kube-plex", ImageID: "a/b@sha256:abc"}}}, "a/b@sha256:abc", "kube-plex", false},
+		{"image in annotation", args{annotation: "a", defname: "none", pod: &corev1.Pod{ObjectMeta: v1.ObjectMeta{Annotations: map[string]string{"a": "kubeplex"}}}, status: []corev1.ContainerStatus{corev1.ContainerStatus{Name: "kubeplex", ImageID: "a/b@sha256:abc"}}}, "a/b@sha256:abc", "kubeplex", false},
+		{"name mismatch", args{defname: "kube-plex", pod: &corev1.Pod{}, status: []corev1.ContainerStatus{corev1.ContainerStatus{Name: "kubeplex", ImageID: "a/b@sha256:abc"}}}, "", "", true},
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotImage, gotName, err := getContainerImage(tt.args.annotation, tt.args.defname, tt.args.pod, tt.args.status)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getContainerImage() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotImage != tt.wantImage {
+				t.Errorf("getContainerImage() got image = %v, want %v", gotImage, tt.wantImage)
+			}
+			if gotName != tt.wantName {
+				t.Errorf("getContainerImage() got name = %v, want %v", gotName, tt.wantName)
+			}
+		})
+	}
+}
