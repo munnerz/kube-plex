@@ -19,14 +19,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Enable caching
-        uses: actions/cache@v2
-        with:
-          path: |
-            vendor/
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v3
@@ -50,6 +42,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
+          push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
