@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-plex
+spec:
+  template:
+    metadata:
+      annotations:
+        kube-plex/pms-addr: my-kube-plex:32400
+    spec:
+      containers:
+        - name: plex
+          env:
+            - name: TZ
+              value: "Europe/Dublin"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /config
+            - name: transcode
+              mountPath: /transcode
+              subPath: aniplex
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: "plex-media"
+        - name: config
+          persistentVolumeClaim:
+            claimName: "my-plex-config"
+        - name: transcode
+          persistentVolumeClaim:
+            claimName: "plex-transcode"

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-plex
+  labels:
+    app: kube-plex
+spec:
+  type: LoadBalancer
+  selector:
+    app: kube-plex
+  ports:
+    - name: pms
+      protocol: TCP
+      port: 32400
+      targetPort: pms
+    - name: http
+      port: 80
+      targetPort: pms
+    - name: https
+      port: 443
+      targetPort: 32443

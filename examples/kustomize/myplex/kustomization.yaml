@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+commonLabels:
+  release: my-plex
+namePrefix: my-
+namespace: plex
+patches:
+  - path: deployment.yaml
+    target:
+      kind: Deployment
+  - path: service.yaml
+  # Work around an issue with RoleBinding in kustomize
+  - patch: |-
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      metadata:
+        name: kube-plex
+      subjects:
+      - kind: ServiceAccount
+        name: my-kube-plex
+        namespace: plex

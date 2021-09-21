@@ -1,0 +1,12 @@
+source:
+  kind: Service
+  name: kube-plex
+targets:
+  - select:
+      kind: Deployment
+      name: kube-plex
+    fieldPaths:
+      - spec.template.metadata.annotations.kube-plex/pms-addr
+    options:
+      delimiter: ":"
+      index: 1

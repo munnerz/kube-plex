@@ -1,0 +1,102 @@
+# Source: kube-plex/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-plex
+  labels:
+    app: kube-plex
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kube-plex
+  template:
+    metadata:
+      labels:
+        app: kube-plex
+      annotations:
+        kube-plex/container-name: "kube-plex-init"
+        # TODO: Update to labels
+        kube-plex/pms-addr: kube-plex:32400
+        kube-plex/pms-container-name: "plex"
+    spec:
+      serviceAccountName: kube-plex
+      # TODO: Make dynamic
+      hostname: "kube-plex"
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
+      initContainers:
+        - name: kube-plex-init
+          image: "ghcr.io/ressu/kube-plex:latest"
+          command:
+            - cp
+            - /kube-plex
+            - /shared/kube-plex
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
+          imagePullPolicy: Always
+      containers:
+        - name: plex
+          image: "plexinc/pms-docker:1.23.5.4862-0f739d462"
+          ports:
+            - name: pms
+              containerPort: 32400
+            - name: http
+              containerPort: 32400
+            - name: https
+              containerPort: 32443
+          env:
+            # TODO: move this to a secret?
+            - name: PLEX_CLAIM
+              value: ""
+            # kube-plex env vars
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources: {}
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            tcpSocket:
+              port: 32400
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            tcpSocket:
+              port: 32400
+            timeoutSeconds: 1
+          # We replace the PMS binary with a postStart hook to save having to
+          # modify the default image entrypoint.
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - bash
+                  - -c
+                  - "#!/bin/bash\nset -e\nmv '/usr/lib/plexmediaserver/Plex Transcoder' '/usr/lib/plexmediaserver/Plex Transcoder.orig' \ncp /shared/kube-plex '/usr/lib/plexmediaserver/Plex Transcoder'\n"
+          imagePullPolicy: IfNotPresent
+          startupProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            tcpSocket:
+              port: 32400
+            timeoutSeconds: 1
+      volumes:
+        - name: shared
+          emptyDir: {}
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
