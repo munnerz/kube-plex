@@ -46,10 +46,16 @@ Claim token isn't the only way to register an instance to a Plex Account. See
 
 ### Helm chart deployment
 
-Create a helm deployment using the provided helm chart. Claim token and other
-chart configuration is defined with the `--set` flags. Available configuration
-options are described in the [chart](charts/kube-plex/README.md) and in more
-detail in [values.yaml](charts/kube-plex/values.yaml).
+Register the helm chart for this repository by running
+
+```bash
+helm repo add kube-plex https://ressu.github.io/kube-plex
+```
+
+Claim token and other chart configuration is defined with the `--set` flags.
+Available configuration options are described in the
+[chart](charts/kube-plex/README.md) and in more detail in
+[values.yaml](charts/kube-plex/values.yaml).
 
 If you have pre-existing persistent volume claims for your
 media, you can specify its name with `--set persistence.data.claimName`. If not
@@ -59,9 +65,13 @@ In order for the transcoding to work, a shared transcode persistent volume claim
 needs to be defined with `--set persistence.transcode.claimName` or by defining
 the relevant parameters separately.
 
+As an example, the following command would install or upgrade an existing plex
+deployment with the given values:
+
 ```bash
-helm install plex ./charts/kube-plex \
+helm upgrade plex kube-plex \
     --namespace plex \
+    --install \
     --set claimToken=[insert claim token here] \
     --set persistence.data.claimName=[existing-pms-data-pvc] \
     --set persistence.transcode.enabled=true \
@@ -99,7 +109,7 @@ pod. Kube-plex replaces the `Plex Transcoder` binary with a launcher on Plex
 startup. Kube-plex launcher processes the arguments from Plex and creates a
 transcoding job to handle the final transcoding.
 
-```
+```bash
 $ kubectl get pod,job
 NAME                                        READY   STATUS    RESTARTS   AGE
 pod/kube-plex-694d659b64-7wg2b              1/1     Running   0          6d23h
@@ -110,6 +120,7 @@ job.batch/pms-elastic-transcoder-tqw5s   0/1           4s         5s
 ```
 
 Transcoder pod will run a shim which will
+
 * Download codecs from main kube-plex pod
 * Relay transcoder callbacks from `Plex Transcoder` to main kube-plex
 
