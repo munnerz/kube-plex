@@ -24,7 +24,7 @@ spec:
       # TODO: Make dynamic
       hostname: "kube-plex"
       nodeSelector:
-        beta.kubernetes.io/arch: amd64
+        kubernetes.io/arch: amd64
       initContainers:
         - name: kube-plex-init
           image: "ghcr.io/ressu/kube-plex:latest"
