@@ -44,6 +44,20 @@ good troubleshooting step is to recreate the claim token and deployment.
 Claim token isn't the only way to register an instance to a Plex Account. See
 "Access Plex Dashboard" below.
 
+### Remote Access
+
+Out of the box, Plex remote access won't work from inside a Kubernetes environment.
+To address that, start by configuring an Ingress or LoadBalanacer for the
+deployment.
+
+Then, go to Settings > Network (Show Advanced) > Custom server access URLs
+
+Here, you can configure the ingress you configured or forward a port from your router
+to the LoadBalancer IP that was assigned. Once configured, restart the deployment.
+
+Even though the Remote Access check if flaky and may indicate failure, it mostly is
+working. Test it by using an off network client (e.g. a phone) to verify.
+
 ### Helm chart deployment
 
 Register the helm chart for this repository by running
