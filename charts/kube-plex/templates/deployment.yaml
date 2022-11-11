@@ -88,6 +88,10 @@ spec:
           - name: https
             containerPort: 32443
         env:
+{{- if .Values.discovery.enabled }}
+        - name: ADVERTISE_IP
+          value: https://{{ .Values.discovery.ip }}:{{ .Values.service.nodePort }}
+{{- end }}
         - name: TZ
           value: "{{ .Values.timezone }}"
         # TODO: move this to a secret?
