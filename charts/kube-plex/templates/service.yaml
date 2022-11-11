@@ -53,6 +53,28 @@ spec:
     - name: https
       port: 443
       targetPort: 32443
+{{- if .Values.discovery.enabled }}
+    - name: udp1
+      nodePort: 32410
+      port: 32410
+      protocol: UDP
+      targetPort: 32410
+    - name: udp2
+      nodePort: 32412
+      port: 32412
+      protocol: UDP
+      targetPort: 32412
+    - name: udp3
+      nodePort: 32413
+      port: 32413
+      protocol: UDP
+      targetPort: 32413
+    - name: udp4
+      nodePort: 32414
+      port: 32414
+      protocol: UDP
+      targetPort: 32414
+{{- end }}
   selector:
     app: {{ template "name" . }}
     release: {{ .Release.Name }}
