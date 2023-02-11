@@ -46,6 +46,10 @@ timezone: Europe/London
 
 # Set extra environment variables
 extraEnv: {}
+  # puid: 1002
+  # pgid: 1002
+  # NVIDIA_VISIBLE_DEVICES: all
+  # NVIDIA_DRIVER_CAPABILITIES: video,compute,utility
 
 service:
   type: ClusterIP
