@@ -139,6 +139,22 @@ spec:
 {{- with .Values.extraEnv }}
     {{- get (fromYaml (include "env_vars" $)) "env" | toYaml | nindent 8  -}}
 {{- end }}
+        # Fill ADVERTISE_IP section in plex automatically
+{{- if (or (eq .Values.service.type "ClusterIP") (empty .Values.service.type)) }}
+        - name: ADVERTISE_IP
+          value: |
+            {{ if .Values.ingress.hosts }}https://{{ join ",https://" .Values.ingress.hosts }}{{ end }}
+            {{ if .Values.ingress.hosts }},https://{{ join ",https://" .Values.ingress.hosts }}:443{{ end }}
+{{- else if eq .Values.service.type "LoadBalancer" }}
+  {{- if (or .Values.service.loadBalancerIP .Values.ingress.hosts (index .Values.service.annotations "dns.pfsense.org/hostname")) }}
+        - name: ADVERTISE_IP
+          value: |
+            {{ if .Values.service.loadBalancerIP }}https://{{ .Values.service.loadBalancerIP }}:32400{{ end }}
+            {{ if index .Values.service.annotations "dns.pfsense.org/hostname" }},https://{{ join ",https://" (splitList "," (index .Values.service.annotations "dns.pfsense.org/hostname")) }}:32400{{ end }}
+            {{ if .Values.ingress.hosts }},https://{{ join ",https://" .Values.ingress.hosts }}{{ end }}
+            {{ if .Values.ingress.hosts }},https://{{ join ",https://" .Values.ingress.hosts }}:443{{ end }}
+  {{- end }}
+{{- end }}
         volumeMounts:
         - name: data
           mountPath: /data
