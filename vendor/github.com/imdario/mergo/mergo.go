@@ -17,9 +17,10 @@ import (
 var (
 	ErrNilArguments                = errors.New("src and dst must not be nil")
 	ErrDifferentArgumentsTypes     = errors.New("src and dst must be of same type")
-	ErrNotSupported                = errors.New("only structs and maps are supported")
+	ErrNotSupported                = errors.New("only structs, maps, and slices are supported")
 	ErrExpectedMapAsDestination    = errors.New("dst was expected to be a map")
 	ErrExpectedStructAsDestination = errors.New("dst was expected to be a struct")
+	ErrNonPointerAgument           = errors.New("dst must be a pointer")
 )
 
 // During deepMerge, must keep track of checks that are
@@ -32,7 +33,7 @@ type visit struct {
 	next *visit
 }
 
-// From src/pkg/encoding/json.
+// From src/pkg/encoding/json/encode.go.
 func isEmptyValue(v reflect.Value) bool {
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
@@ -45,8 +46,15 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.Uint() == 0
 	case reflect.Float32, reflect.Float64:
 		return v.Float() == 0
-	case reflect.Interface, reflect.Ptr, reflect.Func:
+	case reflect.Interface, reflect.Ptr:
+		if v.IsNil() {
+			return true
+		}
+		return isEmptyValue(v.Elem())
+	case reflect.Func:
 		return v.IsNil()
+	case reflect.Invalid:
+		return true
 	}
 	return false
 }
@@ -57,7 +65,7 @@ func resolveValues(dst, src interface{}) (vDst, vSrc reflect.Value, err error) {
 		return
 	}
 	vDst = reflect.ValueOf(dst).Elem()
-	if vDst.Kind() != reflect.Struct && vDst.Kind() != reflect.Map {
+	if vDst.Kind() != reflect.Struct && vDst.Kind() != reflect.Map && vDst.Kind() != reflect.Slice {
 		err = ErrNotSupported
 		return
 	}
@@ -67,24 +75,4 @@ func resolveValues(dst, src interface{}) (vDst, vSrc reflect.Value, err error) {
 		vSrc = vSrc.Elem()
 	}
 	return
-}
-
-// Traverses recursively both values, assigning src's fields values to dst.
-// The map argument tracks comparisons that have already been seen, which allows
-// short circuiting on recursive types.
-func deeper(dst, src reflect.Value, visited map[uintptr]*visit, depth int) (err error) {
-	if dst.CanAddr() {
-		addr := dst.UnsafeAddr()
-		h := 17 * addr
-		seen := visited[h]
-		typ := dst.Type()
-		for p := seen; p != nil; p = p.next {
-			if p.ptr == addr && p.typ == typ {
-				return nil
-			}
-		}
-		// Remember, remember...
-		visited[h] = &visit{addr, typ, seen}
-	}
-	return // TODO refactor
 }

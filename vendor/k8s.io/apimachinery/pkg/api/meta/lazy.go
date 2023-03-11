@@ -19,27 +19,25 @@ package meta
 import (
 	"sync"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // lazyObject defers loading the mapper and typer until necessary.
 type lazyObject struct {
-	loader func() (RESTMapper, runtime.ObjectTyper, error)
+	loader func() (RESTMapper, error)
 
 	lock   sync.Mutex
 	loaded bool
 	err    error
 	mapper RESTMapper
-	typer  runtime.ObjectTyper
 }
 
-// NewLazyObjectLoader handles unrecoverable errors when creating a RESTMapper / ObjectTyper by
+// NewLazyRESTMapperLoader handles unrecoverable errors when creating a RESTMapper / ObjectTyper by
 // returning those initialization errors when the interface methods are invoked. This defers the
 // initialization and any server calls until a client actually needs to perform the action.
-func NewLazyObjectLoader(fn func() (RESTMapper, runtime.ObjectTyper, error)) (RESTMapper, runtime.ObjectTyper) {
+func NewLazyRESTMapperLoader(fn func() (RESTMapper, error)) RESTMapper {
 	obj := &lazyObject{loader: fn}
-	return obj, obj
+	return obj
 }
 
 // init lazily loads the mapper and typer, returning an error if initialization has failed.
@@ -49,13 +47,12 @@ func (o *lazyObject) init() error {
 	if o.loaded {
 		return o.err
 	}
-	o.mapper, o.typer, o.err = o.loader()
+	o.mapper, o.err = o.loader()
 	o.loaded = true
 	return o.err
 }
 
-var _ RESTMapper = &lazyObject{}
-var _ runtime.ObjectTyper = &lazyObject{}
+var _ ResettableRESTMapper = &lazyObject{}
 
 func (o *lazyObject) KindFor(resource schema.GroupVersionResource) (schema.GroupVersionKind, error) {
 	if err := o.init(); err != nil {
@@ -106,16 +103,10 @@ func (o *lazyObject) ResourceSingularizer(resource string) (singular string, err
 	return o.mapper.ResourceSingularizer(resource)
 }
 
-func (o *lazyObject) ObjectKinds(obj runtime.Object) ([]schema.GroupVersionKind, bool, error) {
-	if err := o.init(); err != nil {
-		return nil, false, err
+func (o *lazyObject) Reset() {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	if o.loaded && o.err == nil {
+		MaybeResetRESTMapper(o.mapper)
 	}
-	return o.typer.ObjectKinds(obj)
-}
-
-func (o *lazyObject) Recognizes(gvk schema.GroupVersionKind) bool {
-	if err := o.init(); err != nil {
-		return false
-	}
-	return o.typer.Recognizes(gvk)
 }
