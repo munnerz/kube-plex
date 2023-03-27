@@ -23,12 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// VersionInterfaces contains the interfaces one should use for dealing with types of a particular version.
-type VersionInterfaces struct {
-	runtime.ObjectConvertor
-	MetadataAccessor
-}
-
 type ListMetaAccessor interface {
 	GetListMeta() List
 }
@@ -92,28 +86,19 @@ const (
 type RESTScope interface {
 	// Name of the scope
 	Name() RESTScopeName
-	// ParamName is the optional name of the parameter that should be inserted in the resource url
-	// If empty, no param will be inserted
-	ParamName() string
-	// ArgumentName is the optional name that should be used for the variable holding the value.
-	ArgumentName() string
-	// ParamDescription is the optional description to use to document the parameter in api documentation
-	ParamDescription() string
 }
 
 // RESTMapping contains the information needed to deal with objects of a specific
 // resource and kind in a RESTful manner.
 type RESTMapping struct {
-	// Resource is a string representing the name of this resource as a REST client would see it
-	Resource string
+	// Resource is the GroupVersionResource (location) for this endpoint
+	Resource schema.GroupVersionResource
 
+	// GroupVersionKind is the GroupVersionKind (data format) to submit to this endpoint
 	GroupVersionKind schema.GroupVersionKind
 
 	// Scope contains the information needed to deal with REST Resources that are in a resource hierarchy
 	Scope RESTScope
-
-	runtime.ObjectConvertor
-	MetadataAccessor
 }
 
 // RESTMapper allows clients to map resources to kind, and map kind and version
@@ -146,4 +131,13 @@ type RESTMapper interface {
 	RESTMappings(gk schema.GroupKind, versions ...string) ([]*RESTMapping, error)
 
 	ResourceSingularizer(resource string) (singular string, err error)
+}
+
+// ResettableRESTMapper is a RESTMapper which is capable of resetting itself
+// from discovery.
+// All rest mappers that delegate to other rest mappers must implement this interface and dynamically
+// check if the delegate mapper supports the Reset() operation.
+type ResettableRESTMapper interface {
+	RESTMapper
+	Reset()
 }

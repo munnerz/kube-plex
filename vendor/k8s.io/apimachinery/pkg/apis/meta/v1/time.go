@@ -19,11 +19,6 @@ package v1
 import (
 	"encoding/json"
 	"time"
-
-	openapi "k8s.io/kube-openapi/pkg/common"
-
-	"github.com/go-openapi/spec"
-	"github.com/google/gofuzz"
 )
 
 // Time is a wrapper around time.Time which supports correct
@@ -42,11 +37,6 @@ type Time struct {
 // copy-by-assign, despite the presence of (unexported) Pointer fields.
 func (t *Time) DeepCopyInto(out *Time) {
 	*out = *t
-}
-
-// String returns the representation of the time.
-func (t Time) String() string {
-	return t.Time.String()
 }
 
 // NewTime returns a wrapped instance of the provided time
@@ -75,7 +65,10 @@ func (t *Time) IsZero() bool {
 
 // Before reports whether the time instant t is before u.
 func (t *Time) Before(u *Time) bool {
-	return t.Time.Before(u.Time)
+	if t != nil && u != nil {
+		return t.Time.Before(u.Time)
+	}
+	return false
 }
 
 // Equal reports whether the time instant t is equal to u.
@@ -109,7 +102,10 @@ func (t *Time) UnmarshalJSON(b []byte) error {
 	}
 
 	var str string
-	json.Unmarshal(b, &str)
+	err := json.Unmarshal(b, &str)
+	if err != nil {
+		return err
+	}
 
 	pt, err := time.Parse(time.RFC3339, str)
 	if err != nil {
@@ -147,20 +143,33 @@ func (t Time) MarshalJSON() ([]byte, error) {
 		// Encode unset/nil objects as JSON's "null".
 		return []byte("null"), nil
 	}
-
-	return json.Marshal(t.UTC().Format(time.RFC3339))
+	buf := make([]byte, 0, len(time.RFC3339)+2)
+	buf = append(buf, '"')
+	// time cannot contain non escapable JSON characters
+	buf = t.UTC().AppendFormat(buf, time.RFC3339)
+	buf = append(buf, '"')
+	return buf, nil
 }
 
-func (_ Time) OpenAPIDefinition() openapi.OpenAPIDefinition {
-	return openapi.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type:   []string{"string"},
-				Format: "date-time",
-			},
-		},
+// ToUnstructured implements the value.UnstructuredConverter interface.
+func (t Time) ToUnstructured() interface{} {
+	if t.IsZero() {
+		return nil
 	}
+	buf := make([]byte, 0, len(time.RFC3339))
+	buf = t.UTC().AppendFormat(buf, time.RFC3339)
+	return string(buf)
 }
+
+// OpenAPISchemaType is used by the kube-openapi generator when constructing
+// the OpenAPI spec of this type.
+//
+// See: https://github.com/kubernetes/kube-openapi/tree/master/pkg/generators
+func (_ Time) OpenAPISchemaType() []string { return []string{"string"} }
+
+// OpenAPISchemaFormat is used by the kube-openapi generator when constructing
+// the OpenAPI spec of this type.
+func (_ Time) OpenAPISchemaFormat() string { return "date-time" }
 
 // MarshalQueryParameter converts to a URL query parameter value
 func (t Time) MarshalQueryParameter() (string, error) {
@@ -171,16 +180,3 @@ func (t Time) MarshalQueryParameter() (string, error) {
 
 	return t.UTC().Format(time.RFC3339), nil
 }
-
-// Fuzz satisfies fuzz.Interface.
-func (t *Time) Fuzz(c fuzz.Continue) {
-	if t == nil {
-		return
-	}
-	// Allow for about 1000 years of randomness.  Leave off nanoseconds
-	// because JSON doesn't represent them so they can't round-trip
-	// properly.
-	t.Time = time.Unix(c.Rand.Int63n(1000*365*24*60*60), 0)
-}
-
-var _ fuzz.Interface = &Time{}

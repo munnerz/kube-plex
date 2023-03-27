@@ -24,21 +24,26 @@ import (
 
 // +genclient
 // +genclient:nonNamespaced
-// +genclient:noVerbs
+// +genclient:onlyVerbs=create
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:prerelease-lifecycle-gen:introduced=1.4
+// +k8s:prerelease-lifecycle-gen:deprecated=1.19
+// +k8s:prerelease-lifecycle-gen:replacement=authentication.k8s.io,v1,TokenReview
 
 // TokenReview attempts to authenticate a token to a known user.
 // Note: TokenReview requests may be cached by the webhook token authenticator
 // plugin in the kube-apiserver.
 type TokenReview struct {
 	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec holds information about the request being evaluated
 	Spec TokenReviewSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 
-	// Status is filled in by the server and indicates whether the request can be authenticated.
+	// Status is filled in by the server and indicates whether the token can be authenticated.
 	// +optional
 	Status TokenReviewStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
@@ -48,6 +53,13 @@ type TokenReviewSpec struct {
 	// Token is the opaque bearer token.
 	// +optional
 	Token string `json:"token,omitempty" protobuf:"bytes,1,opt,name=token"`
+	// Audiences is a list of the identifiers that the resource server presented
+	// with the token identifies as. Audience-aware token authenticators will
+	// verify that the token was intended for at least one of the audiences in
+	// this list. If no audiences are provided, the audience will default to the
+	// audience of the Kubernetes apiserver.
+	// +optional
+	Audiences []string `json:"audiences,omitempty" protobuf:"bytes,2,rep,name=audiences"`
 }
 
 // TokenReviewStatus is the result of the token authentication request.
@@ -58,6 +70,17 @@ type TokenReviewStatus struct {
 	// User is the UserInfo associated with the provided token.
 	// +optional
 	User UserInfo `json:"user,omitempty" protobuf:"bytes,2,opt,name=user"`
+	// Audiences are audience identifiers chosen by the authenticator that are
+	// compatible with both the TokenReview and token. An identifier is any
+	// identifier in the intersection of the TokenReviewSpec audiences and the
+	// token's audiences. A client of the TokenReview API that sets the
+	// spec.audiences field should validate that a compatible audience identifier
+	// is returned in the status.audiences field to ensure that the TokenReview
+	// server is audience aware. If a TokenReview returns an empty
+	// status.audience field where status.authenticated is "true", the token is
+	// valid against the audience of the Kubernetes API server.
+	// +optional
+	Audiences []string `json:"audiences,omitempty" protobuf:"bytes,4,rep,name=audiences"`
 	// Error indicates that the token couldn't be checked
 	// +optional
 	Error string `json:"error,omitempty" protobuf:"bytes,3,opt,name=error"`

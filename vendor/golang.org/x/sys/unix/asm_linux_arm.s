@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build !gccgo
+//go:build gc
+// +build gc
 
 #include "textflag.h"
 
@@ -35,7 +36,6 @@ TEXT ·SyscallNoError(SB),NOSPLIT,$0-24
 	BL	runtime·exitsyscall(SB)
 	RET
 
-
 TEXT ·RawSyscall(SB),NOSPLIT,$0-28
 	B	syscall·RawSyscall(SB)
 
@@ -53,5 +53,5 @@ TEXT ·RawSyscallNoError(SB),NOSPLIT,$0-24
 	MOVW	R0, r2+20(FP)
 	RET
 
-TEXT ·seek(SB),NOSPLIT,$0-32
+TEXT ·seek(SB),NOSPLIT,$0-28
 	B	syscall·seek(SB)

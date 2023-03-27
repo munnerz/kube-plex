@@ -20,26 +20,25 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
-	"regexp"
 	"strconv"
 	"strings"
 
-	flag "github.com/spf13/pflag"
-
-	"github.com/go-openapi/spec"
 	inf "gopkg.in/inf.v0"
-	openapi "k8s.io/kube-openapi/pkg/common"
 )
 
 // Quantity is a fixed-point representation of a number.
 // It provides convenient marshaling/unmarshaling in JSON and YAML,
-// in addition to String() and Int64() accessors.
+// in addition to String() and AsInt64() accessors.
 //
 // The serialization format is:
 //
+// ```
 // <quantity>        ::= <signedNumber><suffix>
-//   (Note that <suffix> may be empty, from the "" case in <decimalSI>.)
+//
+//	(Note that <suffix> may be empty, from the "" case in <decimalSI>.)
+//
 // <digit>           ::= 0 | 1 | ... | 9
 // <digits>          ::= <digit> | <digit><digits>
 // <number>          ::= <digits> | <digits>.<digits> | <digits>. | .<digits>
@@ -47,10 +46,15 @@ import (
 // <signedNumber>    ::= <number> | <sign><number>
 // <suffix>          ::= <binarySI> | <decimalExponent> | <decimalSI>
 // <binarySI>        ::= Ki | Mi | Gi | Ti | Pi | Ei
-//   (International System of units; See: http://physics.nist.gov/cuu/Units/binary.html)
+//
+//	(International System of units; See: http://physics.nist.gov/cuu/Units/binary.html)
+//
 // <decimalSI>       ::= m | "" | k | M | G | T | P | E
-//   (Note that 1024 = 1Ki but 1000 = 1k; I didn't choose the capitalization.)
+//
+//	(Note that 1024 = 1Ki but 1000 = 1k; I didn't choose the capitalization.)
+//
 // <decimalExponent> ::= "e" <signedNumber> | "E" <signedNumber>
+// ```
 //
 // No matter which of the three exponent forms is used, no quantity may represent
 // a number greater than 2^63-1 in magnitude, nor may it have more than 3 decimal
@@ -64,19 +68,17 @@ import (
 // Before serializing, Quantity will be put in "canonical form".
 // This means that Exponent/suffix will be adjusted up or down (with a
 // corresponding increase or decrease in Mantissa) such that:
-//   a. No precision is lost
-//   b. No fractional digits will be emitted
-//   c. The exponent (or suffix) is as large as possible.
+//
+// - No precision is lost
+// - No fractional digits will be emitted
+// - The exponent (or suffix) is as large as possible.
+//
 // The sign will be omitted unless the number is negative.
 //
 // Examples:
-//   1.5 will be serialized as "1500m"
-//   1.5Gi will be serialized as "1536Mi"
 //
-// NOTE: We reserve the right to amend this canonical format, perhaps to
-//   allow 1.5 to be canonical.
-// TODO: Remove above disclaimer after all bikeshedding about format is over,
-//   or after March 2015.
+// - 1.5 will be serialized as "1500m"
+// - 1.5Gi will be serialized as "1536Mi"
 //
 // Note that the quantity will NEVER be internally represented by a
 // floating point number. That is the whole point of this exercise.
@@ -130,7 +132,7 @@ const (
 )
 
 // MustParse turns the given string into a quantity or panics; for tests
-// or others cases where you know the string is valid.
+// or other cases where you know the string is valid.
 func MustParse(str string) Quantity {
 	q, err := ParseQuantity(str)
 	if err != nil {
@@ -146,9 +148,6 @@ const (
 )
 
 var (
-	// splitRE is used to get the various parts of a number.
-	splitRE = regexp.MustCompile(splitREString)
-
 	// Errors that could happen while parsing a string.
 	ErrFormatWrong = errors.New("quantities must match the regular expression '" + splitREString + "'")
 	ErrNumeric     = errors.New("unable to parse numeric part of quantity")
@@ -399,25 +398,27 @@ func (q Quantity) DeepCopy() Quantity {
 	return q
 }
 
-// OpenAPIDefinition returns openAPI definition for this type.
-func (_ Quantity) OpenAPIDefinition() openapi.OpenAPIDefinition {
-	return openapi.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type:   []string{"string"},
-				Format: "",
-			},
-		},
-	}
-}
+// OpenAPISchemaType is used by the kube-openapi generator when constructing
+// the OpenAPI spec of this type.
+//
+// See: https://github.com/kubernetes/kube-openapi/tree/master/pkg/generators
+func (_ Quantity) OpenAPISchemaType() []string { return []string{"string"} }
+
+// OpenAPISchemaFormat is used by the kube-openapi generator when constructing
+// the OpenAPI spec of this type.
+func (_ Quantity) OpenAPISchemaFormat() string { return "" }
+
+// OpenAPIV3OneOfTypes is used by the kube-openapi generator when constructing
+// the OpenAPI v3 spec of this type.
+func (Quantity) OpenAPIV3OneOfTypes() []string { return []string{"string", "number"} }
 
 // CanonicalizeBytes returns the canonical form of q and its suffix (see comment on Quantity).
 //
 // Note about BinarySI:
-// * If q.Format is set to BinarySI and q.Amount represents a non-zero value between
-//   -1 and +1, it will be emitted as if q.Format were DecimalSI.
-// * Otherwise, if q.Format is set to BinarySI, fractional parts of q.Amount will be
-//   rounded up. (1.1i becomes 2i.)
+//   - If q.Format is set to BinarySI and q.Amount represents a non-zero value between
+//     -1 and +1, it will be emitted as if q.Format were DecimalSI.
+//   - Otherwise, if q.Format is set to BinarySI, fractional parts of q.Amount will be
+//     rounded up. (1.1i becomes 2i.)
 func (q *Quantity) CanonicalizeBytes(out []byte) (result, suffix []byte) {
 	if q.IsZero() {
 		return zeroBytes, nil
@@ -455,6 +456,26 @@ func (q *Quantity) CanonicalizeBytes(out []byte) (result, suffix []byte) {
 		suffix, _ := quantitySuffixer.constructBytes(2, exponent*10, format)
 		return number, suffix
 	}
+}
+
+// AsApproximateFloat64 returns a float64 representation of the quantity which may
+// lose precision. If the value of the quantity is outside the range of a float64
+// +Inf/-Inf will be returned.
+func (q *Quantity) AsApproximateFloat64() float64 {
+	var base float64
+	var exponent int
+	if q.d.Dec != nil {
+		base, _ = big.NewFloat(0).SetInt(q.d.Dec.UnscaledBig()).Float64()
+		exponent = int(-q.d.Dec.Scale())
+	} else {
+		base = float64(q.i.value)
+		exponent = int(q.i.scale)
+	}
+	if exponent == 0 {
+		return base
+	}
+
+	return base * math.Pow10(exponent)
 }
 
 // AsInt64 returns a representation of the current value as an int64 if a fast conversion
@@ -512,7 +533,7 @@ func (q *Quantity) Sign() int {
 	return q.i.Sign()
 }
 
-// AsScaled returns the current value, rounded up to the provided scale, and returns
+// AsScale returns the current value, rounded up to the provided scale, and returns
 // false if the scale resulted in a loss of precision.
 func (q *Quantity) AsScale(scale Scale) (CanonicalValue, bool) {
 	if q.d.Dec != nil {
@@ -599,6 +620,12 @@ func (q *Quantity) Neg() {
 	q.d.Dec.Neg(q.d.Dec)
 }
 
+// Equal checks equality of two Quantities. This is useful for testing with
+// cmp.Equal.
+func (q Quantity) Equal(v Quantity) bool {
+	return q.Cmp(v) == 0
+}
+
 // int64QuantityExpectedBytes is the expected width in bytes of the canonical string representation
 // of most Quantity values.
 const int64QuantityExpectedBytes = 18
@@ -607,6 +634,9 @@ const int64QuantityExpectedBytes = 18
 // String is an expensive operation and caching this result significantly reduces the cost of
 // normal parse / marshal operations on Quantity.
 func (q *Quantity) String() string {
+	if q == nil {
+		return "<nil>"
+	}
 	if len(q.s) == 0 {
 		result := make([]byte, 0, int64QuantityExpectedBytes)
 		number, suffix := q.CanonicalizeBytes(result)
@@ -624,7 +654,7 @@ func (q Quantity) MarshalJSON() ([]byte, error) {
 		copy(out[1:], q.s)
 		return out, nil
 	}
-	result := make([]byte, int64QuantityExpectedBytes, int64QuantityExpectedBytes)
+	result := make([]byte, int64QuantityExpectedBytes)
 	result[0] = '"'
 	number, suffix := q.CanonicalizeBytes(result[1:1])
 	// if the same slice was returned to us that we passed in, avoid another allocation by copying number into
@@ -641,6 +671,11 @@ func (q Quantity) MarshalJSON() ([]byte, error) {
 	result = append(result, suffix...)
 	result = append(result, '"')
 	return result, nil
+}
+
+// ToUnstructured implements the value.UnstructuredConverter interface.
+func (q Quantity) ToUnstructured() interface{} {
+	return q.String()
 }
 
 // UnmarshalJSON implements the json.Unmarshaller interface.
@@ -664,6 +699,15 @@ func (q *Quantity) UnmarshalJSON(value []byte) error {
 	// This copy is safe because parsed will not be referred to again.
 	*q = parsed
 	return nil
+}
+
+// NewDecimalQuantity returns a new Quantity representing the given
+// value in the given format.
+func NewDecimalQuantity(b inf.Dec, format Format) *Quantity {
+	return &Quantity{
+		d:      infDecAmount{&b},
+		Format: format,
+	}
 }
 
 // NewQuantity returns a new Quantity representing the given
@@ -695,7 +739,7 @@ func NewScaledQuantity(value int64, scale Scale) *Quantity {
 	}
 }
 
-// Value returns the value of q; any fractional part will be lost.
+// Value returns the unscaled value of q rounded up to the nearest integer away from 0.
 func (q *Quantity) Value() int64 {
 	return q.ScaledValue(0)
 }
@@ -706,7 +750,9 @@ func (q *Quantity) MilliValue() int64 {
 	return q.ScaledValue(Milli)
 }
 
-// ScaledValue returns the value of ceil(q * 10^scale); this could overflow an int64.
+// ScaledValue returns the value of ceil(q / 10^scale).
+// For example, NewQuantity(1, DecimalSI).ScaledValue(Milli) returns 1000.
+// This could overflow an int64.
 // To detect overflow, call Value() first and verify the expected magnitude.
 func (q *Quantity) ScaledValue(scale Scale) int64 {
 	if q.d.Dec == nil {
@@ -734,60 +780,29 @@ func (q *Quantity) SetScaled(value int64, scale Scale) {
 	q.i = int64Amount{value: value, scale: scale}
 }
 
-// Copy is a convenience function that makes a deep copy for you. Non-deep
-// copies of quantities share pointers and you will regret that.
-func (q *Quantity) Copy() *Quantity {
-	if q.d.Dec == nil {
-		return &Quantity{
-			s:      q.s,
-			i:      q.i,
-			Format: q.Format,
-		}
-	}
-	tmp := &inf.Dec{}
-	return &Quantity{
-		s:      q.s,
-		d:      infDecAmount{tmp.Set(q.d.Dec)},
-		Format: q.Format,
-	}
+// QuantityValue makes it possible to use a Quantity as value for a command
+// line parameter.
+//
+// +protobuf=true
+// +protobuf.embed=string
+// +protobuf.options.marshal=false
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+// +k8s:deepcopy-gen=true
+type QuantityValue struct {
+	Quantity
 }
 
-// qFlag is a helper type for the Flag function
-type qFlag struct {
-	dest *Quantity
-}
-
-// Sets the value of the internal Quantity. (used by flag & pflag)
-func (qf qFlag) Set(val string) error {
-	q, err := ParseQuantity(val)
+// Set implements pflag.Value.Set and Go flag.Value.Set.
+func (q *QuantityValue) Set(s string) error {
+	quantity, err := ParseQuantity(s)
 	if err != nil {
 		return err
 	}
-	// This copy is OK because q will not be referenced again.
-	*qf.dest = q
+	q.Quantity = quantity
 	return nil
 }
 
-// Converts the value of the internal Quantity to a string. (used by flag & pflag)
-func (qf qFlag) String() string {
-	return qf.dest.String()
-}
-
-// States the type of flag this is (Quantity). (used by pflag)
-func (qf qFlag) Type() string {
+// Type implements pflag.Value.Type.
+func (q QuantityValue) Type() string {
 	return "quantity"
-}
-
-// QuantityFlag is a helper that makes a quantity flag (using standard flag package).
-// Will panic if defaultValue is not a valid quantity.
-func QuantityFlag(flagName, defaultValue, description string) *Quantity {
-	q := MustParse(defaultValue)
-	flag.Var(NewQuantityFlagValue(&q), flagName, description)
-	return &q
-}
-
-// NewQuantityFlagValue returns an object that can be used to back a flag,
-// pointing at the given Quantity variable.
-func NewQuantityFlagValue(q *Quantity) flag.Value {
-	return qFlag{q}
 }

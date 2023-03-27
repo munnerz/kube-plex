@@ -17,31 +17,42 @@ limitations under the License.
 package flowcontrol
 
 import (
+	"context"
+	"errors"
 	"sync"
+	"time"
 
-	"github.com/juju/ratelimit"
+	"golang.org/x/time/rate"
+	"k8s.io/utils/clock"
 )
 
-type RateLimiter interface {
+type PassiveRateLimiter interface {
 	// TryAccept returns true if a token is taken immediately. Otherwise,
 	// it returns false.
 	TryAccept() bool
-	// Accept returns once a token becomes available.
-	Accept()
 	// Stop stops the rate limiter, subsequent calls to CanAccept will return false
 	Stop()
-	// Saturation returns a percentage number which describes how saturated
-	// this rate limiter is.
-	// Usually we use token bucket rate limiter. In that case,
-	// 1.0 means no tokens are available; 0.0 means we have a full bucket of tokens to use.
-	Saturation() float64
 	// QPS returns QPS of this rate limiter
 	QPS() float32
 }
 
-type tokenBucketRateLimiter struct {
-	limiter *ratelimit.Bucket
+type RateLimiter interface {
+	PassiveRateLimiter
+	// Accept returns once a token becomes available.
+	Accept()
+	// Wait returns nil if a token is taken before the Context is done.
+	Wait(ctx context.Context) error
+}
+
+type tokenBucketPassiveRateLimiter struct {
+	limiter *rate.Limiter
 	qps     float32
+	clock   clock.PassiveClock
+}
+
+type tokenBucketRateLimiter struct {
+	tokenBucketPassiveRateLimiter
+	clock Clock
 }
 
 // NewTokenBucketRateLimiter creates a rate limiter which implements a token bucket approach.
@@ -50,49 +61,74 @@ type tokenBucketRateLimiter struct {
 // The bucket is initially filled with 'burst' tokens, and refills at a rate of 'qps'.
 // The maximum number of tokens in the bucket is capped at 'burst'.
 func NewTokenBucketRateLimiter(qps float32, burst int) RateLimiter {
-	limiter := ratelimit.NewBucketWithRate(float64(qps), int64(burst))
-	return newTokenBucketRateLimiter(limiter, qps)
+	limiter := rate.NewLimiter(rate.Limit(qps), burst)
+	return newTokenBucketRateLimiterWithClock(limiter, clock.RealClock{}, qps)
+}
+
+// NewTokenBucketPassiveRateLimiter is similar to NewTokenBucketRateLimiter except that it returns
+// a PassiveRateLimiter which does not have Accept() and Wait() methods.
+func NewTokenBucketPassiveRateLimiter(qps float32, burst int) PassiveRateLimiter {
+	limiter := rate.NewLimiter(rate.Limit(qps), burst)
+	return newTokenBucketRateLimiterWithPassiveClock(limiter, clock.RealClock{}, qps)
 }
 
 // An injectable, mockable clock interface.
 type Clock interface {
-	ratelimit.Clock
+	clock.PassiveClock
+	Sleep(time.Duration)
 }
+
+var _ Clock = (*clock.RealClock)(nil)
 
 // NewTokenBucketRateLimiterWithClock is identical to NewTokenBucketRateLimiter
 // but allows an injectable clock, for testing.
-func NewTokenBucketRateLimiterWithClock(qps float32, burst int, clock Clock) RateLimiter {
-	limiter := ratelimit.NewBucketWithRateAndClock(float64(qps), int64(burst), clock)
-	return newTokenBucketRateLimiter(limiter, qps)
+func NewTokenBucketRateLimiterWithClock(qps float32, burst int, c Clock) RateLimiter {
+	limiter := rate.NewLimiter(rate.Limit(qps), burst)
+	return newTokenBucketRateLimiterWithClock(limiter, c, qps)
 }
 
-func newTokenBucketRateLimiter(limiter *ratelimit.Bucket, qps float32) RateLimiter {
+// NewTokenBucketPassiveRateLimiterWithClock is similar to NewTokenBucketRateLimiterWithClock
+// except that it returns a PassiveRateLimiter which does not have Accept() and Wait() methods
+// and uses a PassiveClock.
+func NewTokenBucketPassiveRateLimiterWithClock(qps float32, burst int, c clock.PassiveClock) PassiveRateLimiter {
+	limiter := rate.NewLimiter(rate.Limit(qps), burst)
+	return newTokenBucketRateLimiterWithPassiveClock(limiter, c, qps)
+}
+
+func newTokenBucketRateLimiterWithClock(limiter *rate.Limiter, c Clock, qps float32) *tokenBucketRateLimiter {
 	return &tokenBucketRateLimiter{
-		limiter: limiter,
-		qps:     qps,
+		tokenBucketPassiveRateLimiter: *newTokenBucketRateLimiterWithPassiveClock(limiter, c, qps),
+		clock:                         c,
 	}
 }
 
-func (t *tokenBucketRateLimiter) TryAccept() bool {
-	return t.limiter.TakeAvailable(1) == 1
+func newTokenBucketRateLimiterWithPassiveClock(limiter *rate.Limiter, c clock.PassiveClock, qps float32) *tokenBucketPassiveRateLimiter {
+	return &tokenBucketPassiveRateLimiter{
+		limiter: limiter,
+		qps:     qps,
+		clock:   c,
+	}
 }
 
-func (t *tokenBucketRateLimiter) Saturation() float64 {
-	capacity := t.limiter.Capacity()
-	avail := t.limiter.Available()
-	return float64(capacity-avail) / float64(capacity)
+func (tbprl *tokenBucketPassiveRateLimiter) Stop() {
+}
+
+func (tbprl *tokenBucketPassiveRateLimiter) QPS() float32 {
+	return tbprl.qps
+}
+
+func (tbprl *tokenBucketPassiveRateLimiter) TryAccept() bool {
+	return tbprl.limiter.AllowN(tbprl.clock.Now(), 1)
 }
 
 // Accept will block until a token becomes available
-func (t *tokenBucketRateLimiter) Accept() {
-	t.limiter.Wait(1)
+func (tbrl *tokenBucketRateLimiter) Accept() {
+	now := tbrl.clock.Now()
+	tbrl.clock.Sleep(tbrl.limiter.ReserveN(now, 1).DelayFrom(now))
 }
 
-func (t *tokenBucketRateLimiter) Stop() {
-}
-
-func (t *tokenBucketRateLimiter) QPS() float32 {
-	return t.qps
+func (tbrl *tokenBucketRateLimiter) Wait(ctx context.Context) error {
+	return tbrl.limiter.Wait(ctx)
 }
 
 type fakeAlwaysRateLimiter struct{}
@@ -105,16 +141,16 @@ func (t *fakeAlwaysRateLimiter) TryAccept() bool {
 	return true
 }
 
-func (t *fakeAlwaysRateLimiter) Saturation() float64 {
-	return 0
-}
-
 func (t *fakeAlwaysRateLimiter) Stop() {}
 
 func (t *fakeAlwaysRateLimiter) Accept() {}
 
 func (t *fakeAlwaysRateLimiter) QPS() float32 {
 	return 1
+}
+
+func (t *fakeAlwaysRateLimiter) Wait(ctx context.Context) error {
+	return nil
 }
 
 type fakeNeverRateLimiter struct {
@@ -131,10 +167,6 @@ func (t *fakeNeverRateLimiter) TryAccept() bool {
 	return false
 }
 
-func (t *fakeNeverRateLimiter) Saturation() float64 {
-	return 1
-}
-
 func (t *fakeNeverRateLimiter) Stop() {
 	t.wg.Done()
 }
@@ -146,3 +178,15 @@ func (t *fakeNeverRateLimiter) Accept() {
 func (t *fakeNeverRateLimiter) QPS() float32 {
 	return 1
 }
+
+func (t *fakeNeverRateLimiter) Wait(ctx context.Context) error {
+	return errors.New("can not be accept")
+}
+
+var (
+	_ RateLimiter = (*tokenBucketRateLimiter)(nil)
+	_ RateLimiter = (*fakeAlwaysRateLimiter)(nil)
+	_ RateLimiter = (*fakeNeverRateLimiter)(nil)
+)
+
+var _ PassiveRateLimiter = (*tokenBucketPassiveRateLimiter)(nil)
